@@ -28,33 +28,34 @@ type Event struct {
 	CreatedAt     time.Time `json:"created_at" firestore:"created_at"`
 }
 
-// FilterRequest encapsulates filtering parameters
-type FilterRequest struct {
-	City      string     `json:"city"`
-	StartDate *time.Time `json:"start_date"` // Pointer to allow nil check
-	EndDate   *time.Time `json:"end_date"`
-	MinPrice  *float64   `json:"min_price"`
-	MaxPrice  *float64   `json:"max_price"`
-	Type      string     `json:"type"`
-}
-
-// SortRequest encapsulates sorting and pagination
-type SortRequest struct {
-	SortKey       string `json:"sort_key"`       // e.g., "start_time", "price"
-	SortDirection string `json:"sort_direction"` // "asc" or "desc"
-	PageSize      int    `json:"page_size"`
-	PageNumber    int    `json:"page_number"`
-}
-
-// SearchRequest is the composite request object for listing events
+// SearchRequest - struktura pomocnicza, teraz budowana z parametrów URL w handlerze
 type SearchRequest struct {
-	Filters FilterRequest `json:"filters"`
-	Sorting SortRequest   `json:"sorting"`
+	Filters FilterRequest
+	Sorting SortRequest
 }
 
-// APIResponse is a standard wrapper for responses
+type FilterRequest struct {
+	City      string
+	StartDate *time.Time
+	EndDate   *time.Time
+	MinPrice  *float64 // ZMIANA: float64
+	MaxPrice  *float64 // ZMIANA: float64
+	Type      string
+}
+
+type SortRequest struct {
+	SortKey       string
+	SortDirection string
+	PageSize      int
+	PageToken     string
+}
+
+type Meta struct {
+	NextPageToken string `json:"next_page_token,omitempty"`
+}
+
 type APIResponse struct {
 	Data  interface{} `json:"data,omitempty"`
 	Error string      `json:"error,omitempty"`
-	Meta  interface{} `json:"meta,omitempty"`
+	Meta  *Meta       `json:"meta,omitempty"`
 }

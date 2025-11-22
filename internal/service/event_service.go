@@ -11,11 +11,10 @@ import (
 
 type EventService interface {
 	CreateEvent(ctx context.Context, event *domain.Event) error
-	// Update signature changed to accept generic map
 	UpdateEvent(ctx context.Context, id string, updates map[string]interface{}) error
 	GetEvent(ctx context.Context, id string) (*domain.Event, error)
 	DeleteEvent(ctx context.Context, id string) error
-	ListEvents(ctx context.Context, request domain.SearchRequest) ([]domain.Event, error)
+	ListEvents(ctx context.Context, request domain.SearchRequest) ([]domain.Event, string, error)
 }
 
 type eventService struct {
@@ -67,7 +66,7 @@ func (s *eventService) DeleteEvent(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *eventService) ListEvents(ctx context.Context, req domain.SearchRequest) ([]domain.Event, error) {
+func (s *eventService) ListEvents(ctx context.Context, req domain.SearchRequest) ([]domain.Event, string, error) {
 	if req.Sorting.PageSize > 100 {
 		req.Sorting.PageSize = 100
 	}

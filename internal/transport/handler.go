@@ -5,7 +5,9 @@ import (
 	"cloud-function-event/internal/service"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/andybalholm/brotli"
 )
@@ -24,17 +26,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodPost:
-		if r.URL.Query().Get("action") == "search" {
-			h.handleList(w, r)
-		} else {
-			h.handleCreate(w, r)
-		}
+		h.handleCreate(w, r)
 
 	case http.MethodPut:
 		h.handleUpdate(w, r)
 
 	case http.MethodGet:
-		h.handleGet(w, r)
+		// If "id" is present, get single event; otherwise list/search
+		if r.URL.Query().Has("id") {
+			h.handleGet(w, r)
+		} else {
+			h.handleList(w, r)
+		}
 
 	case http.MethodDelete:
 		h.handleDelete(w, r)
@@ -61,11 +64,24 @@ func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleUpdate(w http.ResponseWriter, r *http.Request) {
-	// Decode into a map to support partial updates (Merge)
+	// Decode into a map to support partial updates
 	var updates map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+
+	// Use UseNumber to prevent automatic float64 conversion for integers if mixed
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+	if err := decoder.Decode(&updates); err != nil {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
 		return
+	}
+
+	// Convert json.Number back to float64 or int64 appropriately for Firestore
+	for k, v := range updates {
+		if num, ok := v.(json.Number); ok {
+			if f, err := num.Float64(); err == nil {
+				updates[k] = f
+			}
+		}
 	}
 
 	// Extract ID: try Query param first, then Body
@@ -86,19 +102,68 @@ func (h *Handler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleList(w http.ResponseWriter, r *http.Request) {
-	var searchReq domain.SearchRequest
-	if err := json.NewDecoder(r.Body).Decode(&searchReq); err != nil {
-		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
-		return
+	q := r.URL.Query()
+
+	// Build Filters from Query Params
+	filters := domain.FilterRequest{
+		City: q.Get("city"),
+		Type: q.Get("type"),
 	}
 
-	events, err := h.service.ListEvents(r.Context(), searchReq)
+	// Parse Dates (RFC3339)
+	if start := q.Get("start_date"); start != "" {
+		if t, err := time.Parse(time.RFC3339, start); err == nil {
+			filters.StartDate = &t
+		}
+	}
+	if end := q.Get("end_date"); end != "" {
+		if t, err := time.Parse(time.RFC3339, end); err == nil {
+			filters.EndDate = &t
+		}
+	}
+
+	// Parse Prices (float64)
+	if minP := q.Get("min_price"); minP != "" {
+		if v, err := strconv.ParseFloat(minP, 64); err == nil {
+			filters.MinPrice = &v
+		}
+	}
+	if maxP := q.Get("max_price"); maxP != "" {
+		if v, err := strconv.ParseFloat(maxP, 64); err == nil {
+			filters.MaxPrice = &v
+		}
+	}
+
+	// Build Sorting
+	sorting := domain.SortRequest{
+		SortKey:       q.Get("sort_key"),
+		SortDirection: q.Get("sort_dir"),
+		PageToken:     q.Get("page_token"),
+	}
+
+	if size := q.Get("page_size"); size != "" {
+		if s, err := strconv.Atoi(size); err == nil {
+			sorting.PageSize = s
+		}
+	}
+
+	searchReq := domain.SearchRequest{
+		Filters: filters,
+		Sorting: sorting,
+	}
+
+	events, nextToken, err := h.service.ListEvents(r.Context(), searchReq)
 	if err != nil {
 		h.respondError(w, err)
 		return
 	}
 
-	json.NewEncoder(w).Encode(domain.APIResponse{Data: events})
+	resp := domain.APIResponse{Data: events}
+	if nextToken != "" {
+		resp.Meta = &domain.Meta{NextPageToken: nextToken}
+	}
+
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {

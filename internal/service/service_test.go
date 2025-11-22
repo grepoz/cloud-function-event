@@ -10,12 +10,12 @@ import (
 
 // MockRepository manually implements Repository for testing
 type MockRepository struct {
-	SaveFunc func(ctx context.Context, event *domain.Event) error
-	// UpdateFunc signature updated to match interface (id string, updates map)
+	SaveFunc    func(ctx context.Context, event *domain.Event) error
 	UpdateFunc  func(ctx context.Context, id string, updates map[string]interface{}) error
 	GetByIDFunc func(ctx context.Context, id string) (*domain.Event, error)
 	DeleteFunc  func(ctx context.Context, id string) error
-	ListFunc    func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, error)
+	// ZMIANA: Dodano string (nextToken) do sygnatury funkcji
+	ListFunc func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error)
 }
 
 func (m *MockRepository) Save(ctx context.Context, event *domain.Event) error {
@@ -25,7 +25,6 @@ func (m *MockRepository) Save(ctx context.Context, event *domain.Event) error {
 	return nil
 }
 
-// Update implementation updated to match interface
 func (m *MockRepository) Update(ctx context.Context, id string, updates map[string]interface{}) error {
 	if m.UpdateFunc != nil {
 		return m.UpdateFunc(ctx, id, updates)
@@ -47,11 +46,13 @@ func (m *MockRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (m *MockRepository) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, error) {
+// ZMIANA: Metoda List musi zwracać ([]domain.Event, string, error)
+func (m *MockRepository) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx, search)
 	}
-	return nil, nil
+	// Zwracamy pusty string jako token, jeśli funkcja nie jest zdefiniowana
+	return nil, "", nil
 }
 
 func TestCreateEvent(t *testing.T) {
@@ -86,14 +87,12 @@ func TestUpdateEvent(t *testing.T) {
 	svc := service.NewEventService(mockRepo)
 
 	// Case 1: Missing ID
-	// We pass an empty string ID and a valid map
 	err := svc.UpdateEvent(context.Background(), "", map[string]interface{}{"name": "test"})
 	if err == nil {
 		t.Error("Expected error for missing ID on update")
 	}
 
 	// Case 2: Empty Updates
-	// We pass a valid ID but empty map
 	err = svc.UpdateEvent(context.Background(), "123", map[string]interface{}{})
 	if err == nil {
 		t.Error("Expected error for no fields to update")

@@ -3,14 +3,14 @@
 @event_id = 4a761353-7eb4-4565-8491-7a4c6ee4404d
 
 ###  List all events
-POST http://{{host}}
-Content-Type: application/json
+GET http://{{host}}
 
-{
-  "eventname":"Rock Concert",
-  "filters": { "city": "Chicago" },
-  "sorting": { "page_size": 50 }
-}
+
+### List events (GET)
+GET http://localhost:5000/?city=Warsaw&min_price=10.50&sort_dir=asc&page_size=5
+
+### Filter by date
+GET http://localhost:8080/?start_date=2024-01-01T00:00:00Z
 
 
 ### Create a new event
@@ -21,8 +21,8 @@ Content-Type: application/json
 {
   "organizer_name": "John Doe",
   "eventname": "Rock Concert",
-  "city": "New York",
-  "price": 150.50,
+  "city": "Warsaw",
+  "price": 11.50,
   "type": "concert"
 }
 
