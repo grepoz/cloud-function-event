@@ -10,6 +10,10 @@ tidy:
 test: tidy
 	go test ./... -v
 
+# Uruchamia testy integracyjne (wymaga uruchomionego emulatora w innym terminalu)
+test-integration: tidy
+	FIRESTORE_EMULATOR_HOST="localhost:8080" GOOGLE_CLOUD_PROJECT=$(project_id) go test ./test/... -v -count=1
+
 # start firestore emulator
 project_id = local-project-id
 start-emulator:
@@ -18,6 +22,8 @@ start-emulator:
 # Helper to run the function locally with emulator
 run: tidy
 	FIRESTORE_EMULATOR_HOST="localhost:8080" GOOGLE_CLOUD_PROJECT=$(project_id) FUNCTION_TARGET=EventFunction LOCAL_ONLY=true go run cmd/main.go
+
+
 
 # Deploy to Google Cloud Functions (Gen 2)
 deploy: tidy

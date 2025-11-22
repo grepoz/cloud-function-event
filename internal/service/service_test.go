@@ -5,6 +5,7 @@ import (
 	"cloud-function-event/internal/service"
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -14,8 +15,7 @@ type MockRepository struct {
 	UpdateFunc  func(ctx context.Context, id string, updates map[string]interface{}) error
 	GetByIDFunc func(ctx context.Context, id string) (*domain.Event, error)
 	DeleteFunc  func(ctx context.Context, id string) error
-	// ZMIANA: Dodano string (nextToken) do sygnatury funkcji
-	ListFunc func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error)
+	ListFunc    func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error)
 }
 
 func (m *MockRepository) Save(ctx context.Context, event *domain.Event) error {
@@ -46,12 +46,10 @@ func (m *MockRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// ZMIANA: Metoda List musi zwracać ([]domain.Event, string, error)
 func (m *MockRepository) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx, search)
 	}
-	// Zwracamy pusty string jako token, jeśli funkcja nie jest zdefiniowana
 	return nil, "", nil
 }
 
@@ -108,11 +106,78 @@ func TestUpdateEvent(t *testing.T) {
 	}
 }
 
-func TestGetEventValidation(t *testing.T) {
-	svc := service.NewEventService(&MockRepository{})
-	_, err := svc.GetEvent(context.Background(), "")
+func TestGetEvent(t *testing.T) {
+	expectedEvent := &domain.Event{ID: "123", EventName: "Test Event"}
+	mockRepo := &MockRepository{
+		GetByIDFunc: func(ctx context.Context, id string) (*domain.Event, error) {
+			if id == "123" {
+				return expectedEvent, nil
+			}
+			return nil, errors.New("not found")
+		},
+	}
 
+	svc := service.NewEventService(mockRepo)
+
+	// Case 1: Validation
+	_, err := svc.GetEvent(context.Background(), "")
 	if err == nil {
 		t.Error("Expected error for empty ID")
+	}
+
+	// Case 2: Success
+	event, err := svc.GetEvent(context.Background(), "123")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if !reflect.DeepEqual(event, expectedEvent) {
+		t.Errorf("Expected event %v, got %v", expectedEvent, event)
+	}
+}
+
+func TestDeleteEvent(t *testing.T) {
+	mockRepo := &MockRepository{
+		DeleteFunc: func(ctx context.Context, id string) error {
+			if id == "valid" {
+				return nil
+			}
+			return errors.New("db error")
+		},
+	}
+	svc := service.NewEventService(mockRepo)
+
+	if err := svc.DeleteEvent(context.Background(), ""); err == nil {
+		t.Error("Expected error for empty ID")
+	}
+
+	if err := svc.DeleteEvent(context.Background(), "valid"); err != nil {
+		t.Errorf("Expected success, got %v", err)
+	}
+}
+
+func TestListEvents_PageSizeCap(t *testing.T) {
+	// Test sprawdza, czy serwis przycina PageSize do 100
+	mockRepo := &MockRepository{
+		ListFunc: func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
+			if search.Sorting.PageSize != 100 {
+				t.Errorf("Expected PageSize to be capped at 100, got %d", search.Sorting.PageSize)
+			}
+			return []domain.Event{}, "next-token", nil
+		},
+	}
+
+	svc := service.NewEventService(mockRepo)
+
+	// Żądamy 500 elementów
+	req := domain.SearchRequest{
+		Sorting: domain.SortRequest{PageSize: 500},
+	}
+
+	_, token, err := svc.ListEvents(context.Background(), req)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if token != "next-token" {
+		t.Errorf("Expected token 'next-token', got %s", token)
 	}
 }
