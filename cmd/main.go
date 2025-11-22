@@ -19,7 +19,7 @@ func main() {
 
 	// By default, listen on all interfaces. If testing locally, run with
 	// LOCAL_ONLY=true to avoid triggering firewall warnings and
-	// exposing the server outside of your own machine.
+	// exposing the server outside your own machine.
 	hostname := ""
 	if localOnly := os.Getenv("LOCAL_ONLY"); localOnly == "true" {
 		hostname = "127.0.0.1"

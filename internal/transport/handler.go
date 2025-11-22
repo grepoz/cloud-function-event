@@ -60,7 +60,10 @@ func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(domain.APIResponse{Data: event.ID})
+	err := json.NewEncoder(w).Encode(domain.APIResponse{Data: event.ID})
+	if err != nil {
+		return
+	}
 }
 
 func (h *Handler) handleUpdate(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +101,10 @@ func (h *Handler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(domain.APIResponse{Data: "Updated successfully"})
+	err := json.NewEncoder(w).Encode(domain.APIResponse{Data: "Updated successfully"})
+	if err != nil {
+		return
+	}
 }
 
 func (h *Handler) handleList(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +169,10 @@ func (h *Handler) handleList(w http.ResponseWriter, r *http.Request) {
 		resp.Meta = &domain.Meta{NextPageToken: nextToken}
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	err = json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		return
+	}
 }
 
 func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
@@ -179,7 +188,10 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(domain.APIResponse{Data: event})
+	err = json.NewEncoder(w).Encode(domain.APIResponse{Data: event})
+	if err != nil {
+		return
+	}
 }
 
 func (h *Handler) handleDelete(w http.ResponseWriter, r *http.Request) {
@@ -195,7 +207,10 @@ func (h *Handler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(domain.APIResponse{Data: "Deleted successfully"})
+	err := json.NewEncoder(w).Encode(domain.APIResponse{Data: "Deleted successfully"})
+	if err != nil {
+		return
+	}
 }
 
 func (h *Handler) respondError(w http.ResponseWriter, err error) {
@@ -206,7 +221,10 @@ func (h *Handler) respondError(w http.ResponseWriter, err error) {
 	} else {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
+	err = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
+	if err != nil {
+		return
+	}
 }
 
 func WithCompression(next http.Handler) http.Handler {
@@ -218,7 +236,12 @@ func WithCompression(next http.Handler) http.Handler {
 
 		w.Header().Set("Content-Encoding", "br")
 		br := brotli.NewWriter(w)
-		defer br.Close()
+		defer func(br *brotli.Writer) {
+			err := br.Close()
+			if err != nil {
+				http.Error(w, "Failed to close brotli writer", http.StatusInternalServerError)
+			}
+		}(br)
 
 		cw := &compressedWriter{w: w, cw: br}
 		next.ServeHTTP(cw, r)

@@ -3,7 +3,7 @@
 @event_id = 4a761353-7eb4-4565-8491-7a4c6ee4404d
 
 ###  List all events
-GET http://{{host}}
+GET https://{{host}}
 
 
 ### List events (GET)
@@ -15,7 +15,7 @@ GET http://localhost:8080/?start_date=2024-01-01T00:00:00Z
 
 ### Create a new event
 
-POST http://{{host}}/
+POST https://{{host}}/
 Content-Type: application/json
 
 {
@@ -29,12 +29,12 @@ Content-Type: application/json
 
 ### Get event by ID
 
-GET http://{{host}}/
+GET https://{{host}}/
     ?id={{event_id}}
 
 
 ### Update event by ID
-PUT http://{{host}}/
+PUT https://{{host}}/
 Content-Type: application/json
 
 {
@@ -47,5 +47,5 @@ Content-Type: application/json
 }
 
 ### Delete event by ID
-DELETE http://{{host}}/
+DELETE https://{{host}}/
     ?id={{event_id}}

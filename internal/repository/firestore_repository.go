@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -137,7 +138,7 @@ func (r *firestoreRepo) List(ctx context.Context, search domain.SearchRequest) (
 
 	for {
 		doc, err := iter.Next()
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {

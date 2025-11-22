@@ -44,7 +44,12 @@ func setupIntegration(t *testing.T) (*transport.Handler, *firestore.Client) {
 
 func TestIntegration_CreateAndGetEvent(t *testing.T) {
 	handler, client := setupIntegration(t)
-	defer client.Close()
+	defer func(client *firestore.Client) {
+		err := client.Close()
+		if err != nil {
+			t.Fatalf("Failed to close firestore client: %v", err)
+		}
+	}(client)
 
 	// --- KROK 1: Tworzenie Eventu (POST) ---
 	newEvent := map[string]interface{}{
@@ -104,7 +109,12 @@ func TestIntegration_CreateAndGetEvent(t *testing.T) {
 
 func TestIntegration_ListEvents(t *testing.T) {
 	handler, client := setupIntegration(t)
-	defer client.Close()
+	defer func(client *firestore.Client) {
+		err := client.Close()
+		if err != nil {
+			t.Fatalf("Failed to close firestore client: %v", err)
+		}
+	}(client)
 
 	// Tworzymy event, żeby lista nie była pusta
 	createReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(`{"eventname":"List Me", "city":"Cracow", "price": 50}`)))
@@ -139,7 +149,12 @@ func TestIntegration_ListEvents(t *testing.T) {
 
 func TestIntegration_UpdateAndDelete(t *testing.T) {
 	handler, client := setupIntegration(t)
-	defer client.Close()
+	defer func(client *firestore.Client) {
+		err := client.Close()
+		if err != nil {
+			t.Fatalf("Failed to close firestore client: %v", err)
+		}
+	}(client)
 
 	// 1. Tworzymy wydarzenie do edycji
 	createBody := `{"eventname": "To Change", "city": "Old City", "price": 100}`
@@ -147,7 +162,10 @@ func TestIntegration_UpdateAndDelete(t *testing.T) {
 	handler.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(createBody))))
 
 	var resp domain.APIResponse
-	json.NewDecoder(w.Body).Decode(&resp)
+	err := json.NewDecoder(w.Body).Decode(&resp)
+	if err != nil {
+		return
+	}
 	eventID := resp.Data.(string)
 
 	// 2. Aktualizacja (PUT) - Zmieniamy miasto i cenę
@@ -166,7 +184,10 @@ func TestIntegration_UpdateAndDelete(t *testing.T) {
 	handler.ServeHTTP(wGet, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/?id=%s", eventID), nil))
 
 	var eventResp domain.APIResponse
-	json.NewDecoder(wGet.Body).Decode(&eventResp)
+	err = json.NewDecoder(wGet.Body).Decode(&eventResp)
+	if err != nil {
+		return
+	}
 
 	// Konwersja mapy na JSON, by łatwo sprawdzić wartości (unikanie problemów z rzutowaniem map[string]interface{})
 	eventBytes, _ := json.Marshal(eventResp.Data)
@@ -199,7 +220,12 @@ func TestIntegration_UpdateAndDelete(t *testing.T) {
 
 func TestIntegration_Pagination(t *testing.T) {
 	handler, client := setupIntegration(t)
-	defer client.Close()
+	defer func(client *firestore.Client) {
+		err := client.Close()
+		if err != nil {
+			t.Fatalf("Failed to close firestore client: %v", err)
+		}
+	}(client)
 
 	// 1. Przygotowanie danych: Tworzymy 4 wydarzenia
 	// Używamy unikalnych nazw, by łatwo je rozpoznać
@@ -217,7 +243,10 @@ func TestIntegration_Pagination(t *testing.T) {
 	handler.ServeHTTP(wPage1, reqPage1)
 
 	var resp1 domain.APIResponse
-	json.NewDecoder(wPage1.Body).Decode(&resp1)
+	err := json.NewDecoder(wPage1.Body).Decode(&resp1)
+	if err != nil {
+		return
+	}
 
 	data1 := resp1.Data.([]interface{})
 	if len(data1) != 2 {
@@ -236,7 +265,10 @@ func TestIntegration_Pagination(t *testing.T) {
 	handler.ServeHTTP(wPage2, reqPage2)
 
 	var resp2 domain.APIResponse
-	json.NewDecoder(wPage2.Body).Decode(&resp2)
+	err = json.NewDecoder(wPage2.Body).Decode(&resp2)
+	if err != nil {
+		return
+	}
 
 	data2 := resp2.Data.([]interface{})
 	if len(data2) != 2 {
@@ -253,7 +285,12 @@ func TestIntegration_Pagination(t *testing.T) {
 
 func TestIntegration_ComplexFilter(t *testing.T) {
 	handler, client := setupIntegration(t)
-	defer client.Close()
+	defer func(client *firestore.Client) {
+		err := client.Close()
+		if err != nil {
+			t.Fatalf("Failed to close firestore client: %v", err)
+		}
+	}(client)
 
 	// Scenariusz: Szukamy tanich koncertów
 	// Event A: Tani (50), pasuje
@@ -274,7 +311,10 @@ func TestIntegration_ComplexFilter(t *testing.T) {
 	handler.ServeHTTP(w, req)
 
 	var resp domain.APIResponse
-	json.NewDecoder(w.Body).Decode(&resp)
+	err := json.NewDecoder(w.Body).Decode(&resp)
+	if err != nil {
+		return
+	}
 
 	events := resp.Data.([]interface{})
 
