@@ -1,0 +1,242 @@
+basePath: /
+definitions:
+  domain.APIResponse:
+    properties:
+      data: {}
+      error:
+        type: string
+      meta:
+        $ref: '#/definitions/domain.Meta'
+    type: object
+  domain.Event:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      created_at:
+        type: string
+      end_time:
+        type: string
+      event_url:
+        type: string
+      eventname:
+        type: string
+      full_address:
+        type: string
+      has_tickets:
+        type: boolean
+      id:
+        type: string
+      image_url:
+        type: string
+      latitude:
+        type: string
+      longitude:
+        type: string
+      organizer_name:
+        type: string
+      price:
+        type: number
+      provider:
+        type: string
+      start_time:
+        type: string
+      state:
+        type: string
+      street:
+        type: string
+      timezone:
+        type: string
+      type:
+        type: string
+    type: object
+  domain.Meta:
+    properties:
+      next_page_token:
+        type: string
+    type: object
+  domain.TrackingEvent:
+    properties:
+      action:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      payload:
+        type: string
+      user_agent:
+        type: string
+    type: object
+host: http://127.0.0.1:5000/swagger/index.html
+info:
+  contact: {}
+  description: API for managing events in Firestore (Google Cloud Function).
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Cloud Function Event API
+  version: "1.0"
+paths:
+  /:
+    delete:
+      description: Remove an event by ID
+      parameters:
+      - description: Event ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: Delete Event
+      tags:
+      - events
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific event by ID
+      parameters:
+      - description: Event ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Event'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: Get Event
+      tags:
+      - events
+    post:
+      consumes:
+      - application/json
+      description: Create a new event item
+      parameters:
+      - description: Event Data
+        in: body
+        name: event
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Event'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Returns Event ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: Create Event
+      tags:
+      - events
+    put:
+      consumes:
+      - application/json
+      description: Update specific fields of an event
+      parameters:
+      - description: Event ID (can also be in body)
+        in: query
+        name: id
+        type: string
+      - description: Fields to update
+        in: body
+        name: event
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: Update Event
+      tags:
+      - events
+swagger: "2.0"

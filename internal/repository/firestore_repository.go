@@ -15,38 +15,56 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const CollectionName = "events"
+const (
+	CollectionEvents   = "events"
+	CollectionTracking = "tracking"
+)
 
-// EventRepository defines the interface for DB interactions
+// Repositories container to hold all specific repos [NEW]
+type Repositories struct {
+	Events   EventRepository
+	Tracking TrackingRepository
+}
+
+// EventRepository defines the interface for Event DB interactions
 type EventRepository interface {
 	Save(ctx context.Context, event *domain.Event) error
 	Update(ctx context.Context, id string, updates map[string]interface{}) error
 	GetByID(ctx context.Context, id string) (*domain.Event, error)
 	Delete(ctx context.Context, id string) error
-	// List returns events and the next page token
 	List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error)
+}
+
+// TrackingRepository defines the interface for Tracking DB interactions [NEW]
+type TrackingRepository interface {
+	SaveTracking(ctx context.Context, tracking *domain.TrackingEvent) error
+	ListTracking(ctx context.Context) ([]domain.TrackingEvent, error)
 }
 
 type firestoreRepo struct {
 	client *firestore.Client
 }
 
-func NewFirestoreRepository(client *firestore.Client) EventRepository {
-	return &firestoreRepo{client: client}
+func NewFirestoreRepository(client *firestore.Client) *Repositories {
+	repo := &firestoreRepo{client: client}
+	return &Repositories{
+		Events:   repo,
+		Tracking: repo,
+	}
 }
 
 func (r *firestoreRepo) Save(ctx context.Context, event *domain.Event) error {
-	_, err := r.client.Collection(CollectionName).Doc(event.ID).Set(ctx, event)
+	_, err := r.client.Collection(CollectionEvents).Doc(event.ID).Set(ctx, event)
 	return err
 }
 
 func (r *firestoreRepo) Update(ctx context.Context, id string, updates map[string]interface{}) error {
-	_, err := r.client.Collection(CollectionName).Doc(id).Set(ctx, updates, firestore.MergeAll)
+	_, err := r.client.Collection(CollectionEvents).Doc(id).Set(ctx, updates, firestore.MergeAll)
 	return err
 }
 
 func (r *firestoreRepo) GetByID(ctx context.Context, id string) (*domain.Event, error) {
-	doc, err := r.client.Collection(CollectionName).Doc(id).Get(ctx)
+	doc, err := r.client.Collection(CollectionEvents).Doc(id).Get(ctx)
 	if status.Code(err) == codes.NotFound {
 		return nil, fmt.Errorf("event not found")
 	}
@@ -62,7 +80,7 @@ func (r *firestoreRepo) GetByID(ctx context.Context, id string) (*domain.Event, 
 }
 
 func (r *firestoreRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.client.Collection(CollectionName).Doc(id).Delete(ctx)
+	_, err := r.client.Collection(CollectionEvents).Doc(id).Delete(ctx)
 	return err
 }
 
@@ -73,7 +91,7 @@ type cursorData struct {
 }
 
 func (r *firestoreRepo) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
-	query := r.client.Collection(CollectionName).Query
+	query := r.client.Collection(CollectionEvents).Query
 
 	// 1. Apply Filters
 	f := search.Filters
@@ -162,6 +180,41 @@ func (r *firestoreRepo) List(ctx context.Context, search domain.SearchRequest) (
 	}
 
 	return events, nextPageToken, nil
+}
+
+// --- Tracking Implementation [NEW] ---
+
+func (r *firestoreRepo) SaveTracking(ctx context.Context, tracking *domain.TrackingEvent) error {
+	// Use the ID provided or generate a new doc
+	if tracking.ID != "" {
+		_, err := r.client.Collection(CollectionTracking).Doc(tracking.ID).Set(ctx, tracking)
+		return err
+	}
+	_, _, err := r.client.Collection(CollectionTracking).Add(ctx, tracking)
+	return err
+}
+
+func (r *firestoreRepo) ListTracking(ctx context.Context) ([]domain.TrackingEvent, error) {
+	// Simple Get All, ordered by CreatedAt desc
+	iter := r.client.Collection(CollectionTracking).OrderBy("created_at", firestore.Desc).Documents(ctx)
+	defer iter.Stop()
+
+	var tracks []domain.TrackingEvent
+	for {
+		doc, err := iter.Next()
+		if errors.Is(err, iterator.Done) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		var t domain.TrackingEvent
+		if err := doc.DataTo(&t); err != nil {
+			continue
+		}
+		tracks = append(tracks, t)
+	}
+	return tracks, nil
 }
 
 func encodeCursor(sortVal interface{}, id string) string {

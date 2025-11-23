@@ -23,6 +23,8 @@ start-emulator:
 run: tidy
 	FIRESTORE_EMULATOR_HOST="localhost:8080" GOOGLE_CLOUD_PROJECT=$(project_id) FUNCTION_TARGET=EventFunction LOCAL_ONLY=true go run cmd/main.go
 
+swagger:
+	swag init -g function.go --output docs
 
 
 # Deploy to Google Cloud Functions (Gen 2)

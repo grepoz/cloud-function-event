@@ -8,11 +8,26 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"cloud.google.com/go/firestore"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+
+	_ "cloud-function-event/docs" // This import is required for the side-effect of registering docs
+
+	// Import swagger deps
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+// @title Cloud Function Event API
+// @version 1.0
+// @description API for managing events in Firestore (Google Cloud Function).
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host http://127.0.0.1:5000/swagger/index.html
+// @BasePath /
 func init() {
 	// Initialize Firestore Client
 	ctx := context.Background()
@@ -29,17 +44,26 @@ func init() {
 	}
 	println("Firestore client initialized")
 
-	// Initialize Layers
-	repo := repository.NewFirestoreRepository(client)
-	svc := service.NewEventService(repo)
+	// Initialize Repositories (Returns generic container for Events & Tracking)
+	repos := repository.NewFirestoreRepository(client)
 
-	// Initialize Handler with Logic
-	logicHandler := transport.NewHandler(svc)
+	// Initialize Services
+	eventSvc := service.NewEventService(repos.Events)
+	trackingSvc := service.NewTrackingService(repos.Tracking)
+
+	// Initialize Main Router
+	router := transport.NewRouter(eventSvc, trackingSvc)
 
 	// Register Cloud Function
 	functions.HTTP("EventFunction", func(w http.ResponseWriter, r *http.Request) {
-		// Apply Middleware chain here (e.g., Compression)
-		transport.WithCompression(logicHandler).ServeHTTP(w, r)
+		// 1. Serve Swagger UI at /swagger/
+		if strings.HasPrefix(r.URL.Path, "/swagger/") {
+			httpSwagger.WrapHandler(w, r)
+			return
+		}
+
+		// 2. Serve Application Logic (with Compression)
+		transport.WithCompression(router).ServeHTTP(w, r)
 	})
 }
 

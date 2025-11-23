@@ -24,11 +24,20 @@ type Event struct {
 	Provider      string    `json:"provider" firestore:"provider"`
 	Price         float64   `json:"price" firestore:"price"`
 	ImageURL      string    `json:"image_url" firestore:"image_url"`
-	Type          string    `json:"type" firestore:"type"` // Added 'Type' as requested in filter props
+	Type          string    `json:"type" firestore:"type"`
 	CreatedAt     time.Time `json:"created_at" firestore:"created_at"`
 }
 
-// SearchRequest - struktura pomocnicza, teraz budowana z parametrów URL w handlerze
+// TrackingEvent represents an analytics or tracking action [NEW]
+type TrackingEvent struct {
+	ID        string    `json:"id" firestore:"id"`
+	Action    string    `json:"action" firestore:"action"`
+	Payload   string    `json:"payload" firestore:"payload"`
+	UserAgent string    `json:"user_agent" firestore:"user_agent"`
+	CreatedAt time.Time `json:"created_at" firestore:"created_at"`
+}
+
+// SearchRequest - helper structure for filters
 type SearchRequest struct {
 	Filters FilterRequest
 	Sorting SortRequest
@@ -38,8 +47,8 @@ type FilterRequest struct {
 	City      string
 	StartDate *time.Time
 	EndDate   *time.Time
-	MinPrice  *float64 // ZMIANA: float64
-	MaxPrice  *float64 // ZMIANA: float64
+	MinPrice  *float64
+	MaxPrice  *float64
 	Type      string
 }
 

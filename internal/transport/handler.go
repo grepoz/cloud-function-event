@@ -12,53 +12,156 @@ import (
 	"github.com/andybalholm/brotli"
 )
 
-type Handler struct {
-	service service.EventService
+// Router acts as the main entry point and dispatches to specific controllers
+type Router struct {
+	eventHandler    *EventHandler
+	trackingHandler *TrackingHandler
 }
 
-func NewHandler(s service.EventService) *Handler {
-	return &Handler{service: s}
+func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingService) *Router {
+	return &Router{
+		eventHandler:    &EventHandler{service: eventSvc},
+		trackingHandler: &TrackingHandler{service: trackingSvc},
+	}
 }
 
-// EntryPoint handles the routing based on Method and Query Params
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+
+	// Route: /events
+	if strings.HasPrefix(path, "/events") {
+		// Strip the prefix so the EventHandler sees relative paths (like "/")
+		http.StripPrefix("/events", rt.eventHandler).ServeHTTP(w, r)
+		return
+	}
+
+	// Route: /tracking
+	if strings.HasPrefix(path, "/tracking") {
+		http.StripPrefix("/tracking", rt.trackingHandler).ServeHTTP(w, r)
+		return
+	}
+
+	// Default/Fallback (Optional: maybe root / is also events?)
+	http.NotFound(w, r)
+}
+
+type TrackingHandler struct {
+	service service.TrackingService
+}
+
+func (h *TrackingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	switch r.Method {
 	case http.MethodPost:
 		h.handleCreate(w, r)
 
-	case http.MethodPut:
-		h.handleUpdate(w, r)
-
 	case http.MethodGet:
-		// If "id" is present, get single event; otherwise list/search
-		if r.URL.Query().Has("id") {
-			h.handleGet(w, r)
-		} else {
-			h.handleList(w, r)
-		}
-
-	case http.MethodDelete:
-		h.handleDelete(w, r)
+		h.handleList(w, r)
 
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
+// handleCreate creates a new event
+// @Summary Create Tracking Event
+// @Description Create a new tracking event
+// @Tags tracking
+// @Accept json
+// @Produce json
+// @Param tracking body domain.TrackingEvent true "Tracking Event Data"
+// @Success 201 {object} domain.APIResponse{data=string} "Returns Tracking Event ID"
+// @Failure 400 {object} domain.APIResponse{error=string}
+// @Router / [post]
+func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
+	var track domain.TrackingEvent
+	if err := json.NewDecoder(r.Body).Decode(&track); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	// Capture User-Agent automatically if not sent
+	if track.UserAgent == "" {
+		track.UserAgent = r.UserAgent()
+	}
+
+	if err := h.service.TrackEvent(r.Context(), &track); err != nil {
+		respondError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	err := json.NewEncoder(w).Encode(domain.APIResponse{Data: track.ID})
+	if err != nil {
+		return
+	}
+}
+
+// handleList lists all tracking events
+// @Summary List Tracking Events
+// @Description Get a list of all tracking events
+// @Tags tracking
+// @Accept json
+// @Produce json
+// @Success 200 {object} domain.APIResponse{data=[]domain.TrackingEvent}
+// @Router / [get]
+func (h *TrackingHandler) handleList(w http.ResponseWriter, r *http.Request) {
+	tracks, err := h.service.GetAllTracking(r.Context())
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+	err = json.NewEncoder(w).Encode(domain.APIResponse{Data: tracks})
+	if err != nil {
+		return
+	}
+}
+
+type EventHandler struct {
+	service service.EventService
+}
+
+// EntryPoint handles the routing based on Method and Query Params
+func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	switch r.Method {
+	case http.MethodPost:
+		h.handleCreate(w, r)
+	case http.MethodPut:
+		h.handleUpdate(w, r)
+	case http.MethodGet:
+		if r.URL.Query().Has("id") {
+			h.handleGet(w, r)
+		} else {
+			h.handleList(w, r)
+		}
+	case http.MethodDelete:
+		h.handleDelete(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// handleCreate creates a new event
+// @Summary Create Event
+// @Description Create a new event item
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param event body domain.Event true "Event Data"
+// @Success 201 {object} domain.APIResponse{data=string} "Returns Event ID"
+// @Failure 400 {object} domain.APIResponse{error=string}
+// @Router / [post]
+func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var event domain.Event
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
 		return
 	}
-
 	if err := h.service.CreateEvent(r.Context(), &event); err != nil {
-		h.respondError(w, err)
+		respondError(w, err) // Use helper function
 		return
 	}
-
 	w.WriteHeader(http.StatusCreated)
 	err := json.NewEncoder(w).Encode(domain.APIResponse{Data: event.ID})
 	if err != nil {
@@ -66,7 +169,19 @@ func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) handleUpdate(w http.ResponseWriter, r *http.Request) {
+// handleUpdate updates an existing event
+// @Summary Update Event
+// @Description Update specific fields of an event
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param id query string false "Event ID (can also be in body)"
+// @Param event body map[string]interface{} true "Fields to update"
+// @Success 200 {object} domain.APIResponse{data=string}
+// @Failure 400 {object} domain.APIResponse{error=string}
+// @Failure 500 {object} domain.APIResponse{error=string}
+// @Router / [put]
+func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	// Decode into a map to support partial updates
 	var updates map[string]interface{}
 
@@ -96,7 +211,7 @@ func (h *Handler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.UpdateEvent(r.Context(), id, updates); err != nil {
-		h.respondError(w, err)
+		respondError(w, err)
 		return
 	}
 
@@ -107,7 +222,22 @@ func (h *Handler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) handleList(w http.ResponseWriter, r *http.Request) {
+// handleList lists events with filtering and sorting
+// @Summary List Events
+// @Description Get a list of events with optional filters
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param city query string false "Filter by City"
+// @Param type query string false "Filter by Type (e.g. concert)"
+// @Param min_price query number false "Minimum Price"
+// @Param max_price query number false "Maximum Price"
+// @Param start_date query string false "Start Date (RFC3339)"
+// @Param page_size query int false "Page Size"
+// @Param page_token query string false "Pagination Token"
+// @Success 200 {object} domain.APIResponse{data=[]domain.Event}
+// @Router / [get]
+func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
 	// Build Filters from Query Params
@@ -160,7 +290,7 @@ func (h *Handler) handleList(w http.ResponseWriter, r *http.Request) {
 
 	events, nextToken, err := h.service.ListEvents(r.Context(), searchReq)
 	if err != nil {
-		h.respondError(w, err)
+		respondError(w, err)
 		return
 	}
 
@@ -175,7 +305,19 @@ func (h *Handler) handleList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
+// handleGet retrieves a single event
+// @Summary Get Event
+// @Description Get details of a specific event by ID
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param id query string true "Event ID"
+// @Success 200 {object} domain.APIResponse{data=domain.Event}
+// @Failure 400 {object} domain.APIResponse{error=string}
+// @Failure 404 {object} domain.APIResponse{error=string}
+// @Router / [get]
+// @OperationId getEventById
+func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		http.Error(w, "Missing 'id' query parameter", http.StatusBadRequest)
@@ -184,7 +326,7 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 
 	event, err := h.service.GetEvent(r.Context(), id)
 	if err != nil {
-		h.respondError(w, err)
+		respondError(w, err)
 		return
 	}
 
@@ -194,7 +336,16 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) handleDelete(w http.ResponseWriter, r *http.Request) {
+// handleDelete deletes an event
+// @Summary Delete Event
+// @Description Remove an event by ID
+// @Tags events
+// @Produce json
+// @Param id query string true "Event ID"
+// @Success 200 {object} domain.APIResponse{data=string}
+// @Failure 400 {object} domain.APIResponse{error=string}
+// @Router / [delete]
+func (h *EventHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		http.Error(w, "Missing 'id' query parameter", http.StatusBadRequest)
@@ -202,7 +353,7 @@ func (h *Handler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.DeleteEvent(r.Context(), id); err != nil {
-		h.respondError(w, err)
+		respondError(w, err)
 		return
 	}
 
@@ -213,7 +364,7 @@ func (h *Handler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) respondError(w http.ResponseWriter, err error) {
+func respondError(w http.ResponseWriter, err error) {
 	if _, ok := err.(*domain.ValidationError); ok {
 		w.WriteHeader(http.StatusBadRequest)
 	} else if err.Error() == "event not found" {
@@ -233,16 +384,14 @@ func WithCompression(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-
 		w.Header().Set("Content-Encoding", "br")
 		br := brotli.NewWriter(w)
 		defer func(br *brotli.Writer) {
 			err := br.Close()
 			if err != nil {
-				http.Error(w, "Failed to close brotli writer", http.StatusInternalServerError)
+				http.Error(w, "Failed to close writer", http.StatusInternalServerError)
 			}
 		}(br)
-
 		cw := &compressedWriter{w: w, cw: br}
 		next.ServeHTTP(cw, r)
 	})
@@ -253,14 +402,6 @@ type compressedWriter struct {
 	cw *brotli.Writer
 }
 
-func (cw *compressedWriter) Header() http.Header {
-	return cw.w.Header()
-}
-
-func (cw *compressedWriter) Write(b []byte) (int, error) {
-	return cw.cw.Write(b)
-}
-
-func (cw *compressedWriter) WriteHeader(statusCode int) {
-	cw.w.WriteHeader(statusCode)
-}
+func (cw *compressedWriter) Header() http.Header         { return cw.w.Header() }
+func (cw *compressedWriter) Write(b []byte) (int, error) { return cw.cw.Write(b) }
+func (cw *compressedWriter) WriteHeader(statusCode int)  { cw.w.WriteHeader(statusCode) }
