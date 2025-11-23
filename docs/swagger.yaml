@@ -69,7 +69,7 @@ definitions:
       user_agent:
         type: string
     type: object
-host: localhost:5000/swagger/index.html
+host: http://localhost:5000/swagger/index.html
 info:
   contact: {}
   description: API for managing events in Firestore (Google Cloud Function).
@@ -115,12 +115,35 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get details of a specific event by ID
+      description: Get a list of events with optional filters
       parameters:
-      - description: Event ID
+      - description: Filter by City
         in: query
-        name: id
-        required: true
+        name: city
+        type: string
+      - description: Filter by Type (e.g. concert)
+        in: query
+        name: type
+        type: string
+      - description: Minimum Price
+        in: query
+        name: min_price
+        type: number
+      - description: Maximum Price
+        in: query
+        name: max_price
+        type: number
+      - description: Start Date (RFC3339)
+        in: query
+        name: start_date
+        type: string
+      - description: Page Size
+        in: query
+        name: page_size
+        type: integer
+      - description: Pagination Token
+        in: query
+        name: page_token
         type: string
       produces:
       - application/json
@@ -132,27 +155,11 @@ paths:
             - $ref: '#/definitions/domain.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/domain.Event'
+                  items:
+                    $ref: '#/definitions/domain.Event'
+                  type: array
               type: object
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/domain.APIResponse'
-            - properties:
-                error:
-                  type: string
-              type: object
-        "404":
-          description: Not Found
-          schema:
-            allOf:
-            - $ref: '#/definitions/domain.APIResponse'
-            - properties:
-                error:
-                  type: string
-              type: object
-      summary: Get Event
+      summary: List Events
       tags:
       - events
     post:
@@ -237,6 +244,50 @@ paths:
                   type: string
               type: object
       summary: Update Event
+      tags:
+      - events
+  /events/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific event by ID
+      parameters:
+      - description: Event ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Event'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: Get Event
       tags:
       - events
   /tracking:

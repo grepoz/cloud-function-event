@@ -12,56 +12,48 @@ import (
 	"github.com/andybalholm/brotli"
 )
 
-// Router acts as the main entry point and dispatches to specific controllers
-type Router struct {
-	eventHandler    *EventHandler
-	trackingHandler *TrackingHandler
+// NewRouter initializes the main HTTP handler using Go 1.22+ ServeMux
+func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingService) http.Handler {
+	mux := http.NewServeMux()
+
+	// Mount Event Handler at /events/
+	// Requests to /events (no slash) will be redirected to /events/ by ServeMux
+	eventHandler := NewEventHandler(eventSvc)
+	mux.Handle("/events/", http.StripPrefix("/events", eventHandler))
+
+	// Mount Tracking Handler at /tracking/
+	trackingHandler := NewTrackingHandler(trackingSvc)
+	mux.Handle("/tracking/", http.StripPrefix("/tracking", trackingHandler))
+
+	return mux
 }
 
-func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingService) *Router {
-	return &Router{
-		eventHandler:    &EventHandler{service: eventSvc},
-		trackingHandler: &TrackingHandler{service: trackingSvc},
-	}
-}
-
-func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-
-	// Route: /events
-	if strings.HasPrefix(path, "/events") {
-		// Strip the prefix so the EventHandler sees relative paths (like "/")
-		http.StripPrefix("/events", rt.eventHandler).ServeHTTP(w, r)
-		return
-	}
-
-	// Route: /tracking
-	if strings.HasPrefix(path, "/tracking") {
-		http.StripPrefix("/tracking", rt.trackingHandler).ServeHTTP(w, r)
-		return
-	}
-
-	// Default/Fallback (Optional: maybe root / is also events?)
-	http.NotFound(w, r)
-}
+// --- Tracking Handler ---
 
 type TrackingHandler struct {
 	service service.TrackingService
+	mux     *http.ServeMux
+}
+
+func NewTrackingHandler(svc service.TrackingService) *TrackingHandler {
+	h := &TrackingHandler{
+		service: svc,
+		mux:     http.NewServeMux(),
+	}
+	h.routes()
+	return h
+}
+
+func (h *TrackingHandler) routes() {
+	// GET /tracking/ (List)
+	h.mux.HandleFunc("GET /{$}", h.handleList)
+	// POST /tracking/ (Create)
+	h.mux.HandleFunc("POST /{$}", h.handleCreate)
 }
 
 func (h *TrackingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	switch r.Method {
-	case http.MethodPost:
-		h.handleCreate(w, r)
-
-	case http.MethodGet:
-		h.handleList(w, r)
-
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
+	h.mux.ServeHTTP(w, r)
 }
 
 // handleCreate creates a new event
@@ -80,7 +72,6 @@ func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-	// Capture User-Agent automatically if not sent
 	if track.UserAgent == "" {
 		track.UserAgent = r.UserAgent()
 	}
@@ -90,10 +81,7 @@ func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	err := json.NewEncoder(w).Encode(domain.APIResponse{Data: track.ID})
-	if err != nil {
-		return
-	}
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: track.ID})
 }
 
 // handleList lists all tracking events
@@ -110,36 +98,39 @@ func (h *TrackingHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		respondError(w, err)
 		return
 	}
-	err = json.NewEncoder(w).Encode(domain.APIResponse{Data: tracks})
-	if err != nil {
-		return
-	}
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: tracks})
 }
+
+// --- Event Handler ---
 
 type EventHandler struct {
 	service service.EventService
+	mux     *http.ServeMux
 }
 
-// EntryPoint handles the routing based on Method and Query Params
+func NewEventHandler(svc service.EventService) *EventHandler {
+	h := &EventHandler{
+		service: svc,
+		mux:     http.NewServeMux(),
+	}
+	h.routes()
+	return h
+}
+
+func (h *EventHandler) routes() {
+	// Collection routes (matched at root of stripped prefix)
+	h.mux.HandleFunc("GET /{$}", h.handleList)
+	h.mux.HandleFunc("POST /{$}", h.handleCreate)
+
+	// Item routes (matched with path value)
+	h.mux.HandleFunc("GET /{id}", h.handleGet)
+	h.mux.HandleFunc("PUT /{id}", h.handleUpdate)
+	h.mux.HandleFunc("DELETE /{id}", h.handleDelete)
+}
+
 func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	switch r.Method {
-	case http.MethodPost:
-		h.handleCreate(w, r)
-	case http.MethodPut:
-		h.handleUpdate(w, r)
-	case http.MethodGet:
-		if r.URL.Query().Has("id") {
-			h.handleGet(w, r)
-		} else {
-			h.handleList(w, r)
-		}
-	case http.MethodDelete:
-		h.handleDelete(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
+	h.mux.ServeHTTP(w, r)
 }
 
 // handleCreate creates a new event
@@ -159,14 +150,11 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.CreateEvent(r.Context(), &event); err != nil {
-		respondError(w, err) // Use helper function
+		respondError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	err := json.NewEncoder(w).Encode(domain.APIResponse{Data: event.ID})
-	if err != nil {
-		return
-	}
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: event.ID})
 }
 
 // handleUpdate updates an existing event
@@ -182,10 +170,14 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} domain.APIResponse{error=string}
 // @Router /events [put]
 func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
-	// Decode into a map to support partial updates
-	var updates map[string]interface{}
+	// ID is now guaranteed by the route matcher
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing id path parameter", http.StatusBadRequest)
+		return
+	}
 
-	// Use UseNumber to prevent automatic float64 conversion for integers if mixed
+	var updates map[string]interface{}
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
 	if err := decoder.Decode(&updates); err != nil {
@@ -193,20 +185,11 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert json.Number back to float64 or int64 appropriately for Firestore
 	for k, v := range updates {
 		if num, ok := v.(json.Number); ok {
 			if f, err := num.Float64(); err == nil {
 				updates[k] = f
 			}
-		}
-	}
-
-	// Extract ID: try Query param first, then Body
-	id := r.URL.Query().Get("id")
-	if id == "" {
-		if bodyID, ok := updates["id"].(string); ok {
-			id = bodyID
 		}
 	}
 
@@ -216,10 +199,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	err := json.NewEncoder(w).Encode(domain.APIResponse{Data: "Updated successfully"})
-	if err != nil {
-		return
-	}
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: "Updated successfully"})
 }
 
 // handleList lists events with filtering and sorting
@@ -240,13 +220,11 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
-	// Build Filters from Query Params
 	filters := domain.FilterRequest{
 		City: q.Get("city"),
 		Type: q.Get("type"),
 	}
 
-	// Parse Dates (RFC3339)
 	if start := q.Get("start_date"); start != "" {
 		if t, err := time.Parse(time.RFC3339, start); err == nil {
 			filters.StartDate = &t
@@ -258,7 +236,6 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Parse Prices (float64)
 	if minP := q.Get("min_price"); minP != "" {
 		if v, err := strconv.ParseFloat(minP, 64); err == nil {
 			filters.MinPrice = &v
@@ -270,7 +247,6 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Build Sorting
 	sorting := domain.SortRequest{
 		SortKey:       q.Get("sort_key"),
 		SortDirection: q.Get("sort_dir"),
@@ -299,10 +275,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		resp.Meta = &domain.Meta{NextPageToken: nextToken}
 	}
 
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		return
-	}
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // handleGet retrieves a single event
@@ -315,11 +288,13 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} domain.APIResponse{data=domain.Event}
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Failure 404 {object} domain.APIResponse{error=string}
-// @Router /events [get]
+// @Router /events/{id} [get]
 func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := r.PathValue("id")
+	// No empty check strictly needed as pattern /{id} requires it,
+	// but good practice if logic changes
 	if id == "" {
-		http.Error(w, "Missing 'id' query parameter", http.StatusBadRequest)
+		http.Error(w, "Missing id path parameter", http.StatusBadRequest)
 		return
 	}
 
@@ -329,10 +304,7 @@ func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(domain.APIResponse{Data: event})
-	if err != nil {
-		return
-	}
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: event})
 }
 
 // handleDelete deletes an event
@@ -345,9 +317,9 @@ func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Router /events [delete]
 func (h *EventHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "Missing 'id' query parameter", http.StatusBadRequest)
+		http.Error(w, "Missing id path parameter", http.StatusBadRequest)
 		return
 	}
 
@@ -357,10 +329,7 @@ func (h *EventHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	err := json.NewEncoder(w).Encode(domain.APIResponse{Data: "Deleted successfully"})
-	if err != nil {
-		return
-	}
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: "Deleted successfully"})
 }
 
 func respondError(w http.ResponseWriter, err error) {
@@ -371,10 +340,7 @@ func respondError(w http.ResponseWriter, err error) {
 	} else {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	err = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
-	if err != nil {
-		return
-	}
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
 }
 
 func WithCompression(next http.Handler) http.Handler {
@@ -386,10 +352,7 @@ func WithCompression(next http.Handler) http.Handler {
 		w.Header().Set("Content-Encoding", "br")
 		br := brotli.NewWriter(w)
 		defer func(br *brotli.Writer) {
-			err := br.Close()
-			if err != nil {
-				http.Error(w, "Failed to close writer", http.StatusInternalServerError)
-			}
+			_ = br.Close()
 		}(br)
 		cw := &compressedWriter{w: w, cw: br}
 		next.ServeHTTP(cw, r)
