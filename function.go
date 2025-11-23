@@ -26,7 +26,7 @@ import (
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host http://127.0.0.1:5000/swagger/index.html
+// @host localhost:5000/swagger/index.html
 // @BasePath /
 func init() {
 	// Initialize Firestore Client

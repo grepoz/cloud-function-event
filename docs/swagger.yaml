@@ -69,7 +69,7 @@ definitions:
       user_agent:
         type: string
     type: object
-host: http://127.0.0.1:5000/swagger/index.html
+host: localhost:5000/swagger/index.html
 info:
   contact: {}
   description: API for managing events in Firestore (Google Cloud Function).
@@ -79,7 +79,7 @@ info:
   title: Cloud Function Event API
   version: "1.0"
 paths:
-  /:
+  /events:
     delete:
       description: Remove an event by ID
       parameters:
@@ -239,4 +239,61 @@ paths:
       summary: Update Event
       tags:
       - events
+  /tracking:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all tracking events
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.TrackingEvent'
+                  type: array
+              type: object
+      summary: List Tracking Events
+      tags:
+      - tracking
+    post:
+      consumes:
+      - application/json
+      description: Create a new tracking event
+      parameters:
+      - description: Tracking Event Data
+        in: body
+        name: tracking
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TrackingEvent'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Returns Tracking Event ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: Create Tracking Event
+      tags:
+      - tracking
 swagger: "2.0"

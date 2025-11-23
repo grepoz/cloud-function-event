@@ -73,7 +73,7 @@ func (h *TrackingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // @Param tracking body domain.TrackingEvent true "Tracking Event Data"
 // @Success 201 {object} domain.APIResponse{data=string} "Returns Tracking Event ID"
 // @Failure 400 {object} domain.APIResponse{error=string}
-// @Router / [post]
+// @Router /tracking [post]
 func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var track domain.TrackingEvent
 	if err := json.NewDecoder(r.Body).Decode(&track); err != nil {
@@ -103,7 +103,7 @@ func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Success 200 {object} domain.APIResponse{data=[]domain.TrackingEvent}
-// @Router / [get]
+// @Router /tracking [get]
 func (h *TrackingHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	tracks, err := h.service.GetAllTracking(r.Context())
 	if err != nil {
@@ -151,7 +151,7 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // @Param event body domain.Event true "Event Data"
 // @Success 201 {object} domain.APIResponse{data=string} "Returns Event ID"
 // @Failure 400 {object} domain.APIResponse{error=string}
-// @Router / [post]
+// @Router /events [post]
 func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var event domain.Event
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
@@ -180,7 +180,7 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} domain.APIResponse{data=string}
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Failure 500 {object} domain.APIResponse{error=string}
-// @Router / [put]
+// @Router /events [put]
 func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	// Decode into a map to support partial updates
 	var updates map[string]interface{}
@@ -236,7 +236,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 // @Param page_size query int false "Page Size"
 // @Param page_token query string false "Pagination Token"
 // @Success 200 {object} domain.APIResponse{data=[]domain.Event}
-// @Router / [get]
+// @Router /events [get]
 func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
@@ -315,8 +315,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} domain.APIResponse{data=domain.Event}
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Failure 404 {object} domain.APIResponse{error=string}
-// @Router / [get]
-// @OperationId getEventById
+// @Router /events [get]
 func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
@@ -344,7 +343,7 @@ func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 // @Param id query string true "Event ID"
 // @Success 200 {object} domain.APIResponse{data=string}
 // @Failure 400 {object} domain.APIResponse{error=string}
-// @Router / [delete]
+// @Router /events [delete]
 func (h *EventHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {

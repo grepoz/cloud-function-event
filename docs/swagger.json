@@ -10,10 +10,10 @@
         },
         "version": "1.0"
     },
-    "host": "http://127.0.0.1:5000/swagger/index.html",
+    "host": "localhost:5000/swagger/index.html",
     "basePath": "/",
     "paths": {
-        "/": {
+        "/events": {
             "get": {
                 "description": "Get details of a specific event by ID",
                 "consumes": [
@@ -262,6 +262,106 @@
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/tracking": {
+            "get": {
+                "description": "Get a list of all tracking events",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tracking"
+                ],
+                "summary": "List Tracking Events",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.TrackingEvent"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new tracking event",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tracking"
+                ],
+                "summary": "Create Tracking Event",
+                "parameters": [
+                    {
+                        "description": "Tracking Event Data",
+                        "name": "tracking",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.TrackingEvent"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Returns Tracking Event ID",
                         "schema": {
                             "allOf": [
                                 {
