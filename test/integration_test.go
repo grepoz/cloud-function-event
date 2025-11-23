@@ -18,55 +18,108 @@ import (
 	"cloud.google.com/go/firestore"
 )
 
-// setupIntegration przygotowuje infrastrukturę testową podłączoną do emulatora
-func setupIntegration(t *testing.T) (*transport.Handler, *firestore.Client) {
-	// Sprawdzamy, czy emulator jest ustawiony
+// setupIntegration prepares the test infrastructure connected to the emulator
+func setupIntegration(t *testing.T) (*transport.Router, *firestore.Client) {
+
+	err := os.Setenv("FIRESTORE_EMULATOR_HOST", "localhost:8080")
+	if err != nil {
+		t.Fatalf("Failed to set FIRESTORE_EMULATOR_HOST: %v", err)
+		return nil, nil
+	}
+
 	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {
 		t.Skip("Skipping integration test: FIRESTORE_EMULATOR_HOST not set")
 	}
 
 	ctx := context.Background()
-	projectID := "local-project-id" // Musi pasować do tego w Makefile
+	projectID := "local-project-id"
 
-	// 1. Klient Firestore (połączy się z emulatorem dzięki zmiennej ENV)
+	// 1. Firestore Client
 	client, err := firestore.NewClient(ctx, projectID)
 	if err != nil {
 		t.Fatalf("Failed to create firestore client: %v", err)
 	}
 
-	// 2. Budowanie warstw aplikacji (bez mocków!)
-	repo := repository.NewFirestoreRepository(client)
-	svc := service.NewEventService(repo)
-	handler := transport.NewHandler(svc)
+	// 2. Build Layers (Updated for multiple services)
+	repos := repository.NewFirestoreRepository(client)
 
-	return handler, client
+	eventSvc := service.NewEventService(repos.Events)
+	trackingSvc := service.NewTrackingService(repos.Tracking)
+
+	// 3. Use the Router instead of the single Handler
+	router := transport.NewRouter(eventSvc, trackingSvc)
+
+	return router, client
+}
+
+// TestIntegration_Tracking verifies the new /tracking endpoint [NEW]
+func TestIntegration_Tracking(t *testing.T) {
+	router, client := setupIntegration(t)
+	defer client.Close()
+
+	// 1. Track an event (POST /tracking)
+	trackPayload := map[string]string{
+		"action":  "button_click",
+		"payload": "signup_page",
+	}
+	body, _ := json.Marshal(trackPayload)
+
+	// Note the path /tracking
+	req := httptest.NewRequest(http.MethodPost, "/tracking", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected 201 Created, got %d", w.Code)
+	}
+
+	// 2. Retrieve tracking logs (GET /tracking)
+	reqGet := httptest.NewRequest(http.MethodGet, "/tracking", nil)
+	wGet := httptest.NewRecorder()
+
+	router.ServeHTTP(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("Expected 200 OK, got %d", wGet.Code)
+	}
+
+	var resp domain.APIResponse
+	if err := json.NewDecoder(wGet.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	// Verify we found our tracked action
+	dataBytes, _ := json.Marshal(resp.Data)
+	if !bytes.Contains(dataBytes, []byte("button_click")) {
+		t.Errorf("Response did not contain tracked action. Got: %s", string(dataBytes))
+	}
 }
 
 func TestIntegration_CreateAndGetEvent(t *testing.T) {
-	handler, client := setupIntegration(t)
-	defer func(client *firestore.Client) {
-		err := client.Close()
-		if err != nil {
-			t.Fatalf("Failed to close firestore client: %v", err)
-		}
-	}(client)
+	router, client := setupIntegration(t)
+	defer client.Close()
 
-	// --- KROK 1: Tworzenie Eventu (POST) ---
+	// Uses /events prefix now?
+	// NOTE: In the Router implementation provided previously, we strip prefix.
+	// If we send request to "/events", the router handles it.
+
 	newEvent := map[string]interface{}{
-		"eventname":      "Integration Test Concert",
+		"eventname":      "Integration Concert",
 		"city":           "Warsaw",
 		"price":          150.00,
-		"organizer_name": "Test Organizer",
+		"organizer_name": "Test Org",
 		"type":           "concert",
-		"start_time":     time.Now().Add(24 * time.Hour).Format(time.RFC3339),
 	}
 	body, _ := json.Marshal(newEvent)
-	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+
+	// Important: Request URL must match the Router logic in transport/handler.go
+	// If Router checks `strings.HasPrefix(path, "/events")`, we must use /events/
+	req := httptest.NewRequest(http.MethodPost, "/events", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
-	handler.ServeHTTP(w, req)
+	router.ServeHTTP(w, req)
 
-	// Asercja odpowiedzi POST
 	if w.Code != http.StatusCreated {
 		t.Fatalf("Expected 201 Created, got %d. Body: %s", w.Code, w.Body.String())
 	}
@@ -84,10 +137,10 @@ func TestIntegration_CreateAndGetEvent(t *testing.T) {
 
 	// --- KROK 2: Pobieranie Eventu (GET) ---
 	// Symulujemy zapytanie GET ?id=...
-	reqGet := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/?id=%s", eventID), nil)
+	reqGet := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events?id=%s", eventID), nil)
 	wGet := httptest.NewRecorder()
 
-	handler.ServeHTTP(wGet, reqGet)
+	router.ServeHTTP(wGet, reqGet)
 
 	if wGet.Code != http.StatusOK {
 		t.Fatalf("Expected 200 OK, got %d", wGet.Code)
@@ -102,7 +155,7 @@ func TestIntegration_CreateAndGetEvent(t *testing.T) {
 	// Konwersja mapy z powrotem na struct lub asercja na mapie
 	// Tutaj użyjemy prostego sprawdzenia JSON
 	respJSON, _ := json.Marshal(respGet.Data)
-	if !bytes.Contains(respJSON, []byte("Integration Test Concert")) {
+	if !bytes.Contains(respJSON, []byte("Integration Concert")) {
 		t.Errorf("Response does not contain event name. Got: %s", string(respJSON))
 	}
 }
@@ -117,11 +170,11 @@ func TestIntegration_ListEvents(t *testing.T) {
 	}(client)
 
 	// Tworzymy event, żeby lista nie była pusta
-	createReq := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(`{"eventname":"List Me", "city":"Cracow", "price": 50}`)))
+	createReq := httptest.NewRequest(http.MethodPost, "/events", bytes.NewReader([]byte(`{"eventname":"List Me", "city":"Cracow", "price": 50}`)))
 	handler.ServeHTTP(httptest.NewRecorder(), createReq)
 
 	// --- KROK 1: Listowanie (GET z filtrami) ---
-	req := httptest.NewRequest(http.MethodGet, "/?city=Cracow", nil)
+	req := httptest.NewRequest(http.MethodGet, "/events/?city=Cracow", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -159,7 +212,7 @@ func TestIntegration_UpdateAndDelete(t *testing.T) {
 	// 1. Tworzymy wydarzenie do edycji
 	createBody := `{"eventname": "To Change", "city": "Old City", "price": 100}`
 	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(createBody))))
+	handler.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/events", bytes.NewReader([]byte(createBody))))
 
 	var resp domain.APIResponse
 	err := json.NewDecoder(w.Body).Decode(&resp)
@@ -170,7 +223,7 @@ func TestIntegration_UpdateAndDelete(t *testing.T) {
 
 	// 2. Aktualizacja (PUT) - Zmieniamy miasto i cenę
 	updateBody := `{"city": "New City", "price": 200.50}`
-	reqUpdate := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/?id=%s", eventID), bytes.NewReader([]byte(updateBody)))
+	reqUpdate := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/events?id=%s", eventID), bytes.NewReader([]byte(updateBody)))
 	wUpdate := httptest.NewRecorder()
 
 	handler.ServeHTTP(wUpdate, reqUpdate)
@@ -181,7 +234,7 @@ func TestIntegration_UpdateAndDelete(t *testing.T) {
 
 	// 3. Weryfikacja zmian (GET)
 	wGet := httptest.NewRecorder()
-	handler.ServeHTTP(wGet, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/?id=%s", eventID), nil))
+	handler.ServeHTTP(wGet, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events?id=%s", eventID), nil))
 
 	var eventResp domain.APIResponse
 	err = json.NewDecoder(wGet.Body).Decode(&eventResp)
@@ -203,7 +256,7 @@ func TestIntegration_UpdateAndDelete(t *testing.T) {
 
 	// 4. Usuwanie (DELETE)
 	wDel := httptest.NewRecorder()
-	handler.ServeHTTP(wDel, httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/?id=%s", eventID), nil))
+	handler.ServeHTTP(wDel, httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/events?id=%s", eventID), nil))
 
 	if wDel.Code != http.StatusOK {
 		t.Errorf("Delete failed, got %d", wDel.Code)
@@ -211,7 +264,7 @@ func TestIntegration_UpdateAndDelete(t *testing.T) {
 
 	// 5. Weryfikacja usunięcia (GET -> 404)
 	wGetDeleted := httptest.NewRecorder()
-	handler.ServeHTTP(wGetDeleted, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/?id=%s", eventID), nil))
+	handler.ServeHTTP(wGetDeleted, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events?id=%s", eventID), nil))
 
 	if wGetDeleted.Code != http.StatusNotFound {
 		t.Errorf("Expected 404 Not Found after delete, got %d", wGetDeleted.Code)
@@ -233,12 +286,12 @@ func TestIntegration_Pagination(t *testing.T) {
 	for _, title := range titles {
 		body := fmt.Sprintf(`{"eventname": "%s", "city": "PaginationTest", "start_time": "%s"}`,
 			title, time.Now().Add(time.Hour).Format(time.RFC3339))
-		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(body))))
+		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events", bytes.NewReader([]byte(body))))
 	}
 
 	// 2. Pobieramy pierwszą stronę (PageSize = 2)
 	// Sortowanie po created_at lub start_time jest domyślne. Filtrujemy po unikalnym mieście dla testu.
-	reqPage1 := httptest.NewRequest(http.MethodGet, "/?city=PaginationTest&page_size=2", nil)
+	reqPage1 := httptest.NewRequest(http.MethodGet, "/events?city=PaginationTest&page_size=2", nil)
 	wPage1 := httptest.NewRecorder()
 	handler.ServeHTTP(wPage1, reqPage1)
 
@@ -260,7 +313,7 @@ func TestIntegration_Pagination(t *testing.T) {
 	token := resp1.Meta.NextPageToken
 
 	// 3. Pobieramy drugą stronę używając tokenu
-	reqPage2 := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/?city=PaginationTest&page_size=2&page_token=%s", token), nil)
+	reqPage2 := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events?city=PaginationTest&page_size=2&page_token=%s", token), nil)
 	wPage2 := httptest.NewRecorder()
 	handler.ServeHTTP(wPage2, reqPage2)
 
@@ -294,19 +347,19 @@ func TestIntegration_ComplexFilter(t *testing.T) {
 
 	// Scenariusz: Szukamy tanich koncertów
 	// Event A: Tani (50), pasuje
-	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/",
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events",
 		bytes.NewReader([]byte(`{"eventname": "Cheap Concert", "type": "concert", "price": 50}`))))
 
 	// Event B: Drogi (500), nie pasuje ceną
-	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/",
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events",
 		bytes.NewReader([]byte(`{"eventname": "Expensive Concert", "type": "concert", "price": 500}`))))
 
 	// Event C: Tani (40), ale inny typ ("theater"), nie pasuje typem
-	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/",
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events",
 		bytes.NewReader([]byte(`{"eventname": "Puppet Show", "type": "theater", "price": 40}`))))
 
 	// Zapytanie: type=concert AND max_price=100
-	req := httptest.NewRequest(http.MethodGet, "/?type=concert&max_price=100", nil)
+	req := httptest.NewRequest(http.MethodGet, "/events?type=concert&max_price=100", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
