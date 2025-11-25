@@ -26,14 +26,15 @@ run: tidy
 swagger:
 	swag init -g function.go --output docs
 
+#  to debug run `Debug local function` configuration and go: http://127.0.0.1:5000/swagger/index.html
 
 # Deploy to Google Cloud Functions (Gen 2)
-deploy: tidy
-	gcloud functions deploy event-function \
-	--gen2 \
-	--runtime=go121 \
-	--region=us-central1 \
-	--source=. \
-	--entry-point=EventFunction \
-	--trigger-http \
-	--allow-unauthenticated
+#deploy: tidy
+#	gcloud functions deploy event-function \
+#	--gen2 \
+#	--runtime=go121 \
+#	--region=us-central1 \
+#	--source=. \
+#	--entry-point=EventFunction \
+#	--trigger-http \
+#	--allow-unauthenticated
