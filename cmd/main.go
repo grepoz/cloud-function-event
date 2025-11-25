@@ -24,9 +24,10 @@ func main() {
 	if localOnly := os.Getenv("LOCAL_ONLY"); localOnly == "true" {
 		hostname = "127.0.0.1"
 	}
+
+	println("Server started on port " + port)
+
 	if err := funcframework.StartHostPort(hostname, port); err != nil {
 		log.Fatalf("funcframework.StartHostPort: %v\n", err)
 	}
-
-	println("Server started on port " + port)
 }

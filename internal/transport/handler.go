@@ -16,14 +16,26 @@ import (
 func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingService) http.Handler {
 	mux := http.NewServeMux()
 
-	// Mount Event Handler at /events/
-	// Requests to /events (no slash) will be redirected to /events/ by ServeMux
+	// --- Events ---
 	eventHandler := NewEventHandler(eventSvc)
+	// 1. Main registration with trailing slash (canonical)
 	mux.Handle("/events/", http.StripPrefix("/events", eventHandler))
 
-	// Mount Tracking Handler at /tracking/
+	// 2. Fix: Explicitly handle missing slash.
+	// Redirect using 307 (Temporary Redirect) to preserve POST method and body.
+	// Default ServeMux behavior uses 301, which converts POST -> GET.
+	mux.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/events/", http.StatusTemporaryRedirect)
+	})
+
+	// --- Tracking ---
 	trackingHandler := NewTrackingHandler(trackingSvc)
 	mux.Handle("/tracking/", http.StripPrefix("/tracking", trackingHandler))
+
+	// Apply the same fix for tracking
+	mux.HandleFunc("/tracking", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/tracking/", http.StatusTemporaryRedirect)
+	})
 
 	return mux
 }
