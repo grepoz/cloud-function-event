@@ -69,7 +69,7 @@ definitions:
       user_agent:
         type: string
     type: object
-host: http://localhost:5000/swagger/index.html
+host: 127.0.0.1:5000
 info:
   contact: {}
   description: API for managing events in Firestore (Google Cloud Function).

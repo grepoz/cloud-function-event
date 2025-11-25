@@ -600,7 +600,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "http://localhost:5000/swagger/index.html",
+	Host:             "127.0.0.1:5000",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Cloud Function Event API",
