@@ -88,235 +88,235 @@ func TestIntegration_Tracking(t *testing.T) {
 }
 
 func TestIntegration_CreateAndGetEvent(t *testing.T) {
-	router, client := setupIntegration(t)
-	defer client.Close()
+	withFirestore(t, func(t *testing.T, router http.Handler, client *firestore.Client) {
 
-	newEvent := map[string]interface{}{
-		"eventname":  "Integration Concert",
-		"city":       "Warsaw",
-		"type":       "concert",
-		"start_time": time.Now().Add(2 * time.Hour).Format(time.RFC3339),
-	}
-	body, _ := json.Marshal(newEvent)
-
-	// Use trailing slash for collection
-	req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader(body))
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusCreated {
-		t.Fatalf("Expected 201 Created, got %d. Body: %s", w.Code, w.Body.String())
-	}
-
-	var resp domain.APIResponse
-	_ = json.NewDecoder(w.Body).Decode(&resp)
-	eventID := resp.Data.(string)
-
-	// --- Use Path Parameter for GET ---
-	reqGet := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events/%s", eventID), nil)
-	wGet := httptest.NewRecorder()
-
-	router.ServeHTTP(wGet, reqGet)
-
-	if wGet.Code != http.StatusOK {
-		t.Fatalf("Expected 200 OK, got %d", wGet.Code)
-	}
-
-	var respGet domain.APIResponse
-	// Dekodujemy do mapy, bo domain.Event ma typy czasowe, które JSON unmarshaluje różnie
-	if err := json.NewDecoder(wGet.Body).Decode(&respGet); err != nil {
-		t.Fatalf("Failed to decode GET response: %v", err)
-	}
-
-	// Konwersja mapy z powrotem na struct lub asercja na mapie
-	// Tutaj użyjemy prostego sprawdzenia JSON
-	respJSON, _ := json.Marshal(respGet.Data)
-	if !bytes.Contains(respJSON, []byte("Integration Concert")) {
-		t.Errorf("Response does not contain event name. Got: %s", string(respJSON))
-	}
-}
-
-func TestIntegration_ListEvents(t *testing.T) {
-	router, client := setupIntegration(t)
-	defer client.Close()
-
-	// 1. Setup: Create an event so the list is not empty
-	// IMPORTANT: Use trailing slash "/events/" for POST
-	createBody := `{"eventname":"List Me", "city":"Cracow", "price": 50, "start_time":"2024-12-31T20:00:00Z", "type":"theater"}`
-	createReq := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(createBody)))
-	wCreate := httptest.NewRecorder()
-	router.ServeHTTP(wCreate, createReq)
-
-	if wCreate.Code != http.StatusCreated {
-		t.Fatalf("Setup failed: Expected 201 Created, got %d", wCreate.Code)
-	}
-
-	// 2. Test: List events (GET)
-	req := httptest.NewRequest(http.MethodGet, "/events/?city=Cracow", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("Expected 200 OK, got %d", w.Code)
-	}
-
-	var resp domain.APIResponse
-	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	dataSlice, ok := resp.Data.([]interface{})
-	if !ok {
-		t.Logf("Data type is %T", resp.Data)
-	} else {
-		if len(dataSlice) == 0 {
-			t.Error("Expected non-empty list of events")
+		newEvent := map[string]interface{}{
+			"eventname":  "Integration Concert",
+			"city":       "Warsaw",
+			"type":       "concert",
+			"start_time": time.Now().Add(2 * time.Hour).Format(time.RFC3339),
 		}
-		if len(dataSlice) != 1 {
-			t.Errorf("Got %d events, expected 1", len(dataSlice))
-		}
-	}
-}
+		body, _ := json.Marshal(newEvent)
 
-func TestIntegration_UpdateAndDelete(t *testing.T) {
-	router, client := setupIntegration(t)
-	defer client.Close()
-
-	// Create
-	createBody := `{"eventname":"To Change", "city":"Cracow", "price": 50, "start_time":"2024-12-31T20:00:00Z", "type":"theater"}`
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(createBody))))
-
-	var resp domain.APIResponse
-	_ = json.NewDecoder(w.Body).Decode(&resp)
-	eventID := resp.Data.(string)
-
-	// Update (PUT with Path Param)
-	updateBody := `{"city": "New City"}`
-	reqUpdate := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/events/%s", eventID), bytes.NewReader([]byte(updateBody)))
-	wUpdate := httptest.NewRecorder()
-	router.ServeHTTP(wUpdate, reqUpdate)
-
-	if wUpdate.Code != http.StatusOK {
-		t.Fatalf("Update failed, got %d", wUpdate.Code)
-	}
-
-	// Delete (DELETE with Path Param)
-	reqDel := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/events/%s", eventID), nil)
-	wDel := httptest.NewRecorder()
-	router.ServeHTTP(wDel, reqDel)
-
-	if wDel.Code != http.StatusOK {
-		t.Errorf("Delete failed, got %d", wDel.Code)
-	}
-}
-
-func TestIntegration_Pagination(t *testing.T) {
-	router, client := setupIntegration(t)
-	defer client.Close()
-
-	// 1. Prepare data
-	titles := []string{"Page1_A", "Page1_B", "Page2_A", "Page2_B"}
-	for _, title := range titles {
-		body := fmt.Sprintf(`{"eventname": "%s", "city": "PaginationTest", "type": "concert", "start_time": "%s"}`,
-			title, time.Now().Add(time.Hour).Format(time.RFC3339))
-
-		req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(body)))
+		// Use trailing slash for collection
+		req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
 		if w.Code != http.StatusCreated {
-			t.Fatalf("Failed to setup test data. Expected 201, got %d. Body: %s", w.Code, w.Body.String())
+			t.Fatalf("Expected 201 Created, got %d. Body: %s", w.Code, w.Body.String())
 		}
-	}
 
-	// 2. Get Page 1
-	reqPage1 := httptest.NewRequest(http.MethodGet, "/events/?city=PaginationTest&page_size=2&sort_key=eventname&sort_dir=asc", nil)
-	wPage1 := httptest.NewRecorder()
-	router.ServeHTTP(wPage1, reqPage1)
+		var resp domain.APIResponse
+		_ = json.NewDecoder(w.Body).Decode(&resp)
+		eventID := resp.Data.(string)
 
-	var resp1 domain.APIPaginationResponse
-	if err := json.NewDecoder(wPage1.Body).Decode(&resp1); err != nil {
-		t.Fatal(err)
-	}
+		// --- Use Path Parameter for GET ---
+		reqGet := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events/%s", eventID), nil)
+		wGet := httptest.NewRecorder()
 
-	data1 := resp1.Data.([]interface{})
-	if len(data1) != 2 {
-		t.Fatalf("Expected 2 events on page 1, got %d", len(data1))
-	}
+		router.ServeHTTP(wGet, reqGet)
 
-	// Check for Next Page Token
-	if resp1.Meta == nil || resp1.Meta.NextPageToken == "" {
-		t.Fatal("Expected NextPageToken in response metadata")
-	}
-	token := resp1.Meta.NextPageToken
+		if wGet.Code != http.StatusOK {
+			t.Fatalf("Expected 200 OK, got %d", wGet.Code)
+		}
 
-	// 3. Get Page 2 using Token
-	reqPage2 := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events/?city=PaginationTest&page_size=2&sort_key=eventname&sort_dir=asc&page_token=%s", token), nil)
-	wPage2 := httptest.NewRecorder()
-	router.ServeHTTP(wPage2, reqPage2)
+		var respGet domain.APIResponse
+		// Dekodujemy do mapy, bo domain.Event ma typy czasowe, które JSON unmarshaluje różnie
+		if err := json.NewDecoder(wGet.Body).Decode(&respGet); err != nil {
+			t.Fatalf("Failed to decode GET response: %v", err)
+		}
 
-	var resp2 domain.APIResponse
-	if err := json.NewDecoder(wPage2.Body).Decode(&resp2); err != nil {
-		t.Fatal(err)
-	}
+		// Konwersja mapy z powrotem na struct lub asercja na mapie
+		// Tutaj użyjemy prostego sprawdzenia JSON
+		respJSON, _ := json.Marshal(respGet.Data)
+		if !bytes.Contains(respJSON, []byte("Integration Concert")) {
+			t.Errorf("Response does not contain event name. Got: %s", string(respJSON))
+		}
+	})
+}
 
-	data2 := resp2.Data.([]interface{})
-	if len(data2) != 2 {
-		t.Fatalf("Expected 2 events on page 2, got %d", len(data2))
-	}
+func TestIntegration_ListEvents(t *testing.T) {
+	withFirestore(t, func(t *testing.T, router http.Handler, client *firestore.Client) {
 
-	// Verify different data (simple check)
-	title1 := data1[0].(map[string]interface{})["EventName"]
-	title2 := data2[0].(map[string]interface{})["EventName"]
-	if title1 == title2 {
-		t.Error("Page 1 and Page 2 data appear identical")
-	}
+		// 1. Setup: Create an event so the list is not empty
+		// IMPORTANT: Use trailing slash "/events/" for POST
+		createBody := `{"eventname":"List Me", "city":"Cracow", "price": 50, "start_time":"2024-12-31T20:00:00Z", "type":"theater"}`
+		createReq := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(createBody)))
+		wCreate := httptest.NewRecorder()
+		router.ServeHTTP(wCreate, createReq)
+
+		if wCreate.Code != http.StatusCreated {
+			t.Fatalf("Setup failed: Expected 201 Created, got %d", wCreate.Code)
+		}
+
+		// 2. Test: List events (GET)
+		req := httptest.NewRequest(http.MethodGet, "/events/?city=Cracow", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected 200 OK, got %d", w.Code)
+		}
+
+		var resp domain.APIResponse
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		dataSlice, ok := resp.Data.([]interface{})
+		if !ok {
+			t.Logf("Data type is %T", resp.Data)
+		} else {
+			if len(dataSlice) == 0 {
+				t.Error("Expected non-empty list of events")
+			}
+			if len(dataSlice) != 1 {
+				t.Errorf("Got %d events, expected 1", len(dataSlice))
+			}
+		}
+	})
+}
+
+func TestIntegration_UpdateAndDelete(t *testing.T) {
+	withFirestore(t, func(t *testing.T, router http.Handler, client *firestore.Client) {
+
+		// Create
+		createBody := `{"eventname":"To Change", "city":"Cracow", "price": 50, "start_time":"2024-12-31T20:00:00Z", "type":"theater"}`
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(createBody))))
+
+		var resp domain.APIResponse
+		_ = json.NewDecoder(w.Body).Decode(&resp)
+		eventID := resp.Data.(string)
+
+		// Update (PUT with Path Param)
+		updateBody := `{"city": "New City"}`
+		reqUpdate := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/events/%s", eventID), bytes.NewReader([]byte(updateBody)))
+		wUpdate := httptest.NewRecorder()
+		router.ServeHTTP(wUpdate, reqUpdate)
+
+		if wUpdate.Code != http.StatusOK {
+			t.Fatalf("Update failed, got %d", wUpdate.Code)
+		}
+
+		// Delete (DELETE with Path Param)
+		reqDel := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/events/%s", eventID), nil)
+		wDel := httptest.NewRecorder()
+		router.ServeHTTP(wDel, reqDel)
+
+		if wDel.Code != http.StatusOK {
+			t.Errorf("Delete failed, got %d", wDel.Code)
+		}
+	})
+}
+
+func TestIntegration_Pagination(t *testing.T) {
+	withFirestore(t, func(t *testing.T, router http.Handler, client *firestore.Client) {
+
+		// 1. Prepare data
+		titles := []string{"Page1_A", "Page1_B", "Page2_A", "Page2_B"}
+		for _, title := range titles {
+			body := fmt.Sprintf(`{"eventname": "%s", "city": "PaginationTest", "type": "concert", "start_time": "%s"}`,
+				title, time.Now().Add(time.Hour).Format(time.RFC3339))
+
+			req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(body)))
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != http.StatusCreated {
+				t.Fatalf("Failed to setup test data. Expected 201, got %d. Body: %s", w.Code, w.Body.String())
+			}
+		}
+
+		// 2. Get Page 1
+		reqPage1 := httptest.NewRequest(http.MethodGet, "/events/?city=PaginationTest&page_size=2&sort_key=eventname&sort_dir=asc", nil)
+		wPage1 := httptest.NewRecorder()
+		router.ServeHTTP(wPage1, reqPage1)
+
+		var resp1 domain.APIPaginationResponse
+		if err := json.NewDecoder(wPage1.Body).Decode(&resp1); err != nil {
+			t.Fatal(err)
+		}
+
+		data1 := resp1.Data.([]interface{})
+		if len(data1) != 2 {
+			t.Fatalf("Expected 2 events on page 1, got %d", len(data1))
+		}
+
+		// Check for Next Page Token
+		if resp1.Meta == nil || resp1.Meta.NextPageToken == "" {
+			t.Fatal("Expected NextPageToken in response metadata")
+		}
+		token := resp1.Meta.NextPageToken
+
+		// 3. Get Page 2 using Token
+		reqPage2 := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events/?city=PaginationTest&page_size=2&sort_key=eventname&sort_dir=asc&page_token=%s", token), nil)
+		wPage2 := httptest.NewRecorder()
+		router.ServeHTTP(wPage2, reqPage2)
+
+		var resp2 domain.APIPaginationResponse
+		if err := json.NewDecoder(wPage2.Body).Decode(&resp2); err != nil {
+			t.Fatal(err)
+		}
+
+		data2 := resp2.Data.([]interface{})
+		if len(data2) != 2 {
+			t.Fatalf("Expected 2 events on page 2, got %d", len(data2))
+		}
+
+		// Verify different data (simple check)
+		title1 := data1[0].(map[string]interface{})["EventName"]
+		title2 := data2[0].(map[string]interface{})["EventName"]
+		if title1 == title2 {
+			t.Error("Page 1 and Page 2 data appear identical")
+		}
+	})
 }
 
 func TestIntegration_ComplexFilter(t *testing.T) {
-	router, client := setupIntegration(t)
-	defer client.Close()
+	withFirestore(t, func(t *testing.T, router http.Handler, client *firestore.Client) {
 
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events/",
-		bytes.NewReader([]byte(`{"eventname": "Cheap Concert", "city": "Gdansk", "type": "concert", "price": 50, "start_time":"2024-12-31T20:00:00Z"}`))))
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events/",
+			bytes.NewReader([]byte(`{"eventname": "Cheap Concert", "city": "Gdansk", "type": "concert", "price": 50, "start_time":"2024-12-31T20:00:00Z"}`))))
 
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events/",
-		bytes.NewReader([]byte(`{"eventname": "Expensive Concert", "city": "Gdansk", "type": "concert", "price": 500, "start_time":"2024-12-31T20:00:00Z"}`))))
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events/",
+			bytes.NewReader([]byte(`{"eventname": "Expensive Concert", "city": "Gdansk", "type": "concert", "price": 500, "start_time":"2024-12-31T20:00:00Z"}`))))
 
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events/",
-		bytes.NewReader([]byte(`{"eventname": "Puppet Show", "city": "Gdansk", "type": "theater", "price": 40, "start_time":"2024-12-31T20:00:00Z"}`))))
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events/",
+			bytes.NewReader([]byte(`{"eventname": "Puppet Show", "city": "Gdansk", "type": "theater", "price": 40, "start_time":"2024-12-31T20:00:00Z"}`))))
 
-	// Query
-	req := httptest.NewRequest(http.MethodGet, "/events/?type=concert&max_price=100", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+		// Query
+		req := httptest.NewRequest(http.MethodGet, "/events/?type=concert&max_price=100", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
 
-	var resp domain.APIResponse
-	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
-		t.Fatal(err)
-	}
-
-	events := resp.Data.([]interface{})
-	found := false
-	for _, e := range events {
-		eMap := e.(map[string]interface{})
-		name := eMap["EventName"].(string)
-
-		if name == "Cheap Concert" {
-			found = true
+		var resp domain.APIResponse
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
 		}
-		if name == "Expensive Concert" {
-			t.Error("Found expensive concert but filtering by max_price=100")
-		}
-		if name == "Puppet Show" {
-			t.Error("Found theater show but filtering by type=concert")
-		}
-	}
 
-	if !found {
-		t.Error("Did not find expected 'Cheap Concert'")
-	}
+		events := resp.Data.([]interface{})
+		found := false
+		for _, e := range events {
+			eMap := e.(map[string]interface{})
+			name := eMap["EventName"].(string)
+
+			if name == "Cheap Concert" {
+				found = true
+			}
+			if name == "Expensive Concert" {
+				t.Error("Found expensive concert but filtering by max_price=100")
+			}
+			if name == "Puppet Show" {
+				t.Error("Found theater show but filtering by type=concert")
+			}
+		}
+
+		if !found {
+			t.Error("Did not find expected 'Cheap Concert'")
+		}
+	})
 }
 
 func withFirestore(t *testing.T, testFunc func(t *testing.T, router http.Handler, client *firestore.Client)) {

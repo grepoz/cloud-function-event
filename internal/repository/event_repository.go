@@ -62,11 +62,23 @@ func (r *eventRepo) Save(ctx context.Context, event *domain.Event) error {
 }
 
 func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
-	q := r.client.Collection(CollectionEvents).Select()
+	// 1. Determine Sorting FIRST
+	sortKey := search.Sorting.SortKey
+	if sortKey == "" {
+		sortKey = "created_at"
+	}
+	direction := firestore.Asc
+	if search.Sorting.SortDirection == "desc" {
+		direction = firestore.Desc
+	}
+
+	// 2. Initialize 'q' using the OrderBy clause
+	// This converts the CollectionRef to a Query immediately
+	q := r.client.Collection(CollectionEvents).OrderBy(sortKey, direction)
 
 	f := search.Filters
 
-	// Filters
+	// 3. Apply Filters
 	if f.City != "" {
 		q = q.Where("city", "==", f.City)
 	}
@@ -86,22 +98,11 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		q = q.Where("end_time", "<=", *f.EndDate)
 	}
 
-	// Sorting
-	sortKey := search.Sorting.SortKey
-	if sortKey == "" {
-		sortKey = "created_at"
-	}
-	direction := firestore.Asc
-	if search.Sorting.SortDirection == "desc" {
-		direction = firestore.Desc
-	}
-
-	// Apply Primary Sort
-	q = q.OrderBy(sortKey, direction)
-	// Apply Secondary Sort (ID) to ensure deterministic ordering for pagination
+	// 4. Apply Secondary Sort (ID)
+	// We append this to the existing sort order
 	q = q.OrderBy("id", firestore.Asc)
 
-	// Pagination Limit
+	// 5. Pagination Limit
 	limit := search.Sorting.PageSize
 	if limit <= 0 {
 		limit = 20
