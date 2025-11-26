@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/api/iterator"
 )
 
 func setupIntegration(t *testing.T) (http.Handler, *firestore.Client) {
@@ -48,42 +49,42 @@ func setupIntegration(t *testing.T) (http.Handler, *firestore.Client) {
 	return router, client
 }
 func TestIntegration_Tracking(t *testing.T) {
-	router, client := setupIntegration(t)
-	defer client.Close()
+	withFirestore(t, func(t *testing.T, router http.Handler, client *firestore.Client) {
 
-	trackPayload := map[string]string{
-		"action":  "button_click",
-		"payload": "signup_page",
-	}
-	body, _ := json.Marshal(trackPayload)
+		trackPayload := map[string]string{
+			"action":  "button_click",
+			"payload": "signup_page",
+		}
+		body, _ := json.Marshal(trackPayload)
 
-	req := httptest.NewRequest(http.MethodPost, "/tracking/", bytes.NewReader(body))
-	w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/tracking/", bytes.NewReader(body))
+		w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+		router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusCreated {
-		t.Errorf("Expected 201 Created, got %d", w.Code)
-	}
+		if w.Code != http.StatusCreated {
+			t.Errorf("Expected 201 Created, got %d", w.Code)
+		}
 
-	reqGet := httptest.NewRequest(http.MethodGet, "/tracking/", nil)
-	wGet := httptest.NewRecorder()
+		reqGet := httptest.NewRequest(http.MethodGet, "/tracking/", nil)
+		wGet := httptest.NewRecorder()
 
-	router.ServeHTTP(wGet, reqGet)
+		router.ServeHTTP(wGet, reqGet)
 
-	if wGet.Code != http.StatusOK {
-		t.Fatalf("Expected 200 OK, got %d", wGet.Code)
-	}
+		if wGet.Code != http.StatusOK {
+			t.Fatalf("Expected 200 OK, got %d", wGet.Code)
+		}
 
-	var resp domain.APIResponse
-	if err := json.NewDecoder(wGet.Body).Decode(&resp); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
+		var resp domain.APIResponse
+		if err := json.NewDecoder(wGet.Body).Decode(&resp); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
 
-	dataBytes, _ := json.Marshal(resp.Data)
-	if !bytes.Contains(dataBytes, []byte("button_click")) {
-		t.Errorf("Response did not contain tracked action. Got: %s", string(dataBytes))
-	}
+		dataBytes, _ := json.Marshal(resp.Data)
+		if !bytes.Contains(dataBytes, []byte("button_click")) {
+			t.Errorf("Response did not contain tracked action. Got: %s", string(dataBytes))
+		}
+	})
 }
 
 func TestIntegration_CreateAndGetEvent(t *testing.T) {
@@ -305,5 +306,60 @@ func TestIntegration_ComplexFilter(t *testing.T) {
 
 	if !found {
 		t.Error("Did not find expected 'Cheap Concert'")
+	}
+}
+
+func withFirestore(t *testing.T, testFunc func(t *testing.T, router http.Handler, client *firestore.Client)) {
+	t.Helper()
+
+	router, client := setupIntegration(t)
+
+	t.Cleanup(func() {
+		cleanupFirestore(t, client)
+		client.Close()
+	})
+
+	testFunc(t, router, client)
+}
+
+func cleanupFirestore(t *testing.T, client *firestore.Client) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	collections := []string{"events", "tracking"}
+
+	for _, colName := range collections {
+		iter := client.Collection(colName).Documents(ctx)
+		defer iter.Stop()
+
+		batch := client.Batch()
+		count := 0
+
+		for {
+			doc, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				t.Fatalf("Failed to iterate documents in %s: %v", colName, err)
+			}
+
+			batch.Delete(doc.Ref)
+			count++
+
+			if count == 500 {
+				if _, err := batch.Commit(ctx); err != nil {
+					t.Fatalf("Batch commit failed: %v", err)
+				}
+				batch = client.Batch()
+				count = 0
+			}
+		}
+
+		if count > 0 {
+			if _, err := batch.Commit(ctx); err != nil {
+				t.Fatalf("Final batch commit failed: %v", err)
+			}
+		}
 	}
 }
