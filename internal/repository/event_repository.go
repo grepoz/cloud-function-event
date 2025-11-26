@@ -2,9 +2,10 @@ package repository
 
 import (
 	"cloud-function-event/internal/domain"
-	"cloud.google.com/go/firestore"
 	"context"
 	"fmt"
+
+	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -59,7 +60,7 @@ func (r *eventRepo) Save(ctx context.Context, event *domain.Event) error {
 }
 
 func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, error) {
-	q := r.client.Collection(CollectionEvents)
+	q := r.client.Collection(CollectionEvents).Select()
 	f := search.Filters
 
 	if f.City != "" {
