@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 )
 
 // MockTrackingRepo
@@ -26,6 +27,33 @@ func (m *MockTrackingRepo) ListTracking(ctx context.Context) ([]domain.TrackingE
 		return m.ListFunc(ctx)
 	}
 	return nil, nil
+}
+
+func TestGetAllTracking(t *testing.T) {
+	expectedData := []domain.TrackingEvent{
+		{ID: "t1", Action: "click", CreatedAt: time.Now()},
+		{ID: "t2", Action: "view", CreatedAt: time.Now()},
+	}
+
+	mockRepo := &MockTrackingRepo{
+		ListFunc: func(ctx context.Context) ([]domain.TrackingEvent, error) {
+			return expectedData, nil
+		},
+	}
+
+	svc := service.NewTrackingService(mockRepo)
+	result, err := svc.GetAllTracking(context.Background())
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Expected 2 items, got %d", len(result))
+	}
+	if result[0].ID != "t1" {
+		t.Errorf("Expected first item ID 't1', got '%s'", result[0].ID)
+	}
 }
 
 func TestTrackEvent_Validation(t *testing.T) {

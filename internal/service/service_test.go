@@ -75,6 +75,27 @@ func TestCreateEvent(t *testing.T) {
 	}
 }
 
+func TestCreateEvent_Validation(t *testing.T) {
+	mockRepo := &MockRepository{} // No methods needed, should fail before repo call
+	svc := service.NewEventService(mockRepo)
+
+	// Case: Empty EventName
+	event := &domain.Event{
+		City: "Warsaw",
+		// EventName is missing
+	}
+
+	err := svc.CreateEvent(context.Background(), event)
+	if err == nil {
+		t.Error("Expected validation error for empty EventName, got nil")
+	}
+
+	expectedErr := "event name is required"
+	if err.Error() != expectedErr {
+		t.Errorf("Expected error message '%s', got '%s'", expectedErr, err.Error())
+	}
+}
+
 func TestUpdateEvent(t *testing.T) {
 	mockRepo := &MockRepository{
 		UpdateFunc: func(ctx context.Context, id string, updates map[string]interface{}) error {

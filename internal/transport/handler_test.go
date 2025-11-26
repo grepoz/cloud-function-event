@@ -4,6 +4,8 @@ import (
 	"cloud-function-event/internal/domain"
 	"cloud-function-event/internal/transport"
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -141,5 +143,87 @@ func TestHandler_UpdateEvent_UseNumber(t *testing.T) {
 
 	if w.Result().StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+	}
+}
+
+// --- NEW TESTS ---
+
+func TestEventHandler_Create_InvalidJSON(t *testing.T) {
+	router := transport.NewRouter(&MockEventService{}, &MockTrackingService{})
+
+	// Send invalid JSON (missing closing brace)
+	body := `{"eventname": "Broken JSON"`
+	req := httptest.NewRequest(http.MethodPost, "/events/", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400 Bad Request for invalid JSON, got %d", w.Code)
+	}
+}
+
+func TestEventHandler_Get_NotFound(t *testing.T) {
+	// Mock service to return an error looking like "event not found"
+	mockSvc := &MockEventService{
+		GetFunc: func(ctx context.Context, id string) (*domain.Event, error) {
+			// Matches the error check in transport/handler.go: respondError
+			return nil, errors.New("event not found")
+		},
+	}
+	router := transport.NewRouter(mockSvc, &MockTrackingService{})
+
+	req := httptest.NewRequest(http.MethodGet, "/events/missing-id", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected 404 Not Found, got %d", w.Code)
+	}
+}
+
+func TestTrackingHandler_List(t *testing.T) {
+	expectedTracks := []domain.TrackingEvent{
+		{ID: "track_1", Action: "signup"},
+	}
+
+	mockTrackSvc := &MockTrackingService{
+		GetAllFunc: func(ctx context.Context) ([]domain.TrackingEvent, error) {
+			return expectedTracks, nil
+		},
+	}
+
+	router := transport.NewRouter(&MockEventService{}, mockTrackSvc)
+
+	req := httptest.NewRequest(http.MethodGet, "/tracking/", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200 OK, got %d", w.Code)
+	}
+
+	// Verify JSON response
+	var resp domain.APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal("Failed to decode response")
+	}
+
+	// Cast 'data' (interface{}) back to slice to verify content
+	// Note: JSON unmarshaling into interface{} results in map[string]interface{} for objects
+	dataSlice, ok := resp.Data.([]interface{})
+	if !ok {
+		t.Fatalf("Response data is not a slice, got %T", resp.Data)
+	}
+
+	if len(dataSlice) != 1 {
+		t.Errorf("Expected 1 tracking event, got %d", len(dataSlice))
+	}
+
+	item := dataSlice[0].(map[string]interface{})
+	if item["action"] != "signup" {
+		t.Errorf("Expected action 'signup', got %v", item["action"])
 	}
 }
