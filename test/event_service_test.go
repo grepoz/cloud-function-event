@@ -134,11 +134,11 @@ func TestDeleteEvent(t *testing.T) {
 
 func TestListEvents_PageSizeCap(t *testing.T) {
 	mockRepo := &MockRepository{
-		ListFunc: func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, error) {
+		ListFunc: func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
 			if search.Sorting.PageSize != 100 {
 				t.Errorf("Expected PageSize to be capped at 100, got %d", search.Sorting.PageSize)
 			}
-			return []domain.Event{}, nil
+			return []domain.Event{}, "", nil
 		},
 	}
 
@@ -148,7 +148,7 @@ func TestListEvents_PageSizeCap(t *testing.T) {
 		Sorting: domain.SortRequest{PageSize: 500},
 	}
 
-	_, err := svc.ListEvents(context.Background(), req)
+	_, _, err := svc.ListEvents(context.Background(), req)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

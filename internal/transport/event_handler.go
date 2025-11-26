@@ -166,6 +166,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	sorting := domain.SortRequest{
 		SortKey:       sortKey,
 		SortDirection: sortDir,
+		PageToken:     q.Get("page_token"),
 	}
 
 	if size := q.Get("page_size"); size != "" {
@@ -179,12 +180,18 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		Sorting: sorting,
 	}
 
-	events, err := h.service.ListEvents(r.Context(), searchReq)
+	events, nextToken, err := h.service.ListEvents(r.Context(), searchReq)
 	if err != nil {
 		respondError(w, err)
 		return
 	}
-	resp := domain.APIResponse{Data: events}
+
+	resp := domain.APIPaginationResponse{
+		Data: events,
+		Meta: &domain.Meta{
+			NextPageToken: nextToken,
+		},
+	}
 	_ = json.NewEncoder(w).Encode(resp)
 }
 

@@ -3,6 +3,8 @@ package repository
 import (
 	"cloud-function-event/internal/domain"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	"cloud.google.com/go/firestore"
@@ -14,7 +16,7 @@ import (
 const CollectionEvents = "events"
 
 type EventRepository interface {
-	List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, error)
+	List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error)
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*domain.Event, error)
 	Update(ctx context.Context, id string, updates map[string]interface{}) error
@@ -59,7 +61,7 @@ func (r *eventRepo) Save(ctx context.Context, event *domain.Event) error {
 	return err
 }
 
-func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, error) {
+func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
 	q := r.client.Collection(CollectionEvents).Select()
 
 	f := search.Filters
@@ -85,15 +87,21 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	}
 
 	// Sorting
-	if search.Sorting.SortKey != "" {
-		direction := firestore.Asc
-		if search.Sorting.SortDirection == "desc" {
-			direction = firestore.Desc
-		}
-		q = q.OrderBy(search.Sorting.SortKey, direction)
+	sortKey := search.Sorting.SortKey
+	if sortKey == "" {
+		sortKey = "created_at"
+	}
+	direction := firestore.Asc
+	if search.Sorting.SortDirection == "desc" {
+		direction = firestore.Desc
 	}
 
-	// Pagination
+	// Apply Primary Sort
+	q = q.OrderBy(sortKey, direction)
+	// Apply Secondary Sort (ID) to ensure deterministic ordering for pagination
+	q = q.OrderBy("id", firestore.Asc)
+
+	// Pagination Limit
 	limit := search.Sorting.PageSize
 	if limit <= 0 {
 		limit = 20
@@ -103,18 +111,16 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	}
 	q = q.Limit(limit)
 
-	// TODO: THIS IS SLOW FOR LARGE OFFSETS. CONSIDER USING CURSORS INSTEAD.
-	pageNumber := search.Sorting.PageNumber
-	if pageNumber < 1 {
-		pageNumber = 1
+	// Handle Page Token (Cursor)
+	if search.Sorting.PageToken != "" {
+		cursorVals, err := decodeCursor(search.Sorting.PageToken)
+		if err != nil {
+			return nil, "", fmt.Errorf("invalid page token")
+		}
+		q = q.StartAfter(cursorVals...)
 	}
 
-	offset := (pageNumber - 1) * limit
-	if offset > 0 {
-		q = q.Offset(offset)
-	}
-
-	// Read
+	// Execute Query
 	iter := q.Documents(ctx)
 	defer iter.Stop()
 
@@ -125,18 +131,27 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 
 		var e domain.Event
 		if err := doc.DataTo(&e); err != nil {
-			return nil, err // better to return
+			return nil, "", err
 		}
 
 		events = append(events, e)
 	}
 
-	return events, nil
+	// Generate Next Page Token
+	nextToken := ""
+	if len(events) == limit {
+		lastEvent := events[len(events)-1]
+		// We need to encode values for all OrderBy fields: [sortKey, id]
+		val := getSortValue(&lastEvent, sortKey)
+		nextToken = encodeCursor([]interface{}{val, lastEvent.ID})
+	}
+
+	return events, nextToken, nil
 }
 
 func getSortValue(e *domain.Event, key string) interface{} {
@@ -151,7 +166,24 @@ func getSortValue(e *domain.Event, key string) interface{} {
 		return e.City
 	case "type":
 		return e.Type
+	case "created_at":
+		return e.CreatedAt
 	default:
-		return e.ID
+		return e.CreatedAt
 	}
+}
+
+func encodeCursor(vals []interface{}) string {
+	b, _ := json.Marshal(vals)
+	return base64.StdEncoding.EncodeToString(b)
+}
+
+func decodeCursor(token string) ([]interface{}, error) {
+	b, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		return nil, err
+	}
+	var vals []interface{}
+	err = json.Unmarshal(b, &vals)
+	return vals, err
 }

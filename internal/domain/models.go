@@ -28,7 +28,7 @@ type Event struct {
 	CreatedAt     time.Time `firestore:"created_at"`
 }
 
-// TrackingEvent represents an analytics or tracking action [NEW]
+// TrackingEvent represents an analytics or tracking action
 type TrackingEvent struct {
 	ID        string    `firestore:"id"`
 	Action    string    `firestore:"action"`
@@ -56,10 +56,20 @@ type SortRequest struct {
 	SortKey       string
 	SortDirection string
 	PageSize      int
-	PageNumber    int
+	PageToken     string
 }
 
 type APIResponse struct {
-	Data  interface{}
-	Error string
+	Data  interface{} `json:"data,omitempty"`
+	Error string      `json:"error,omitempty"`
+}
+
+type Meta struct {
+	NextPageToken string `json:"nextPageToken,omitempty"`
+}
+
+type APIPaginationResponse struct {
+	Data  interface{} `json:"data,omitempty"`
+	Error string      `json:"error,omitempty"`
+	Meta  *Meta       `json:"meta,omitempty"`
 }

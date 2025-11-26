@@ -218,7 +218,6 @@ func TestIntegration_Pagination(t *testing.T) {
 	// 1. Prepare data
 	titles := []string{"Page1_A", "Page1_B", "Page2_A", "Page2_B"}
 	for _, title := range titles {
-		// FIX: Added "type": "concert" to satisfy validation requirements
 		body := fmt.Sprintf(`{"eventname": "%s", "city": "PaginationTest", "type": "concert", "start_time": "%s"}`,
 			title, time.Now().Add(time.Hour).Format(time.RFC3339))
 
@@ -226,18 +225,17 @@ func TestIntegration_Pagination(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// FIX: Ensure the event was actually created
 		if w.Code != http.StatusCreated {
 			t.Fatalf("Failed to setup test data. Expected 201, got %d. Body: %s", w.Code, w.Body.String())
 		}
 	}
 
 	// 2. Get Page 1
-	reqPage1 := httptest.NewRequest(http.MethodGet, "/events/?city=PaginationTest&page_size=2", nil)
+	reqPage1 := httptest.NewRequest(http.MethodGet, "/events/?city=PaginationTest&page_size=2&sort_key=eventname&sort_dir=asc", nil)
 	wPage1 := httptest.NewRecorder()
 	router.ServeHTTP(wPage1, reqPage1)
 
-	var resp1 domain.APIResponse
+	var resp1 domain.APIPaginationResponse
 	if err := json.NewDecoder(wPage1.Body).Decode(&resp1); err != nil {
 		t.Fatal(err)
 	}
@@ -247,8 +245,14 @@ func TestIntegration_Pagination(t *testing.T) {
 		t.Fatalf("Expected 2 events on page 1, got %d", len(data1))
 	}
 
-	// 3. Get Page 2
-	reqPage2 := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events/?city=PaginationTest&page_size=2"), nil)
+	// Check for Next Page Token
+	if resp1.Meta == nil || resp1.Meta.NextPageToken == "" {
+		t.Fatal("Expected NextPageToken in response metadata")
+	}
+	token := resp1.Meta.NextPageToken
+
+	// 3. Get Page 2 using Token
+	reqPage2 := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events/?city=PaginationTest&page_size=2&sort_key=eventname&sort_dir=asc&page_token=%s", token), nil)
 	wPage2 := httptest.NewRecorder()
 	router.ServeHTTP(wPage2, reqPage2)
 
@@ -261,13 +265,19 @@ func TestIntegration_Pagination(t *testing.T) {
 	if len(data2) != 2 {
 		t.Fatalf("Expected 2 events on page 2, got %d", len(data2))
 	}
+
+	// Verify different data (simple check)
+	title1 := data1[0].(map[string]interface{})["EventName"]
+	title2 := data2[0].(map[string]interface{})["EventName"]
+	if title1 == title2 {
+		t.Error("Page 1 and Page 2 data appear identical")
+	}
 }
 
 func TestIntegration_ComplexFilter(t *testing.T) {
 	router, client := setupIntegration(t)
 	defer client.Close()
 
-	// FIX: Use "/events/" for all POST requests here too
 	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events/",
 		bytes.NewReader([]byte(`{"eventname": "Cheap Concert", "city": "Gdansk", "type": "concert", "price": 50, "start_time":"2024-12-31T20:00:00Z"}`))))
 
