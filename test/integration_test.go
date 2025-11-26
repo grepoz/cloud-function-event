@@ -91,9 +91,10 @@ func TestIntegration_CreateAndGetEvent(t *testing.T) {
 	defer client.Close()
 
 	newEvent := map[string]interface{}{
-		"eventname": "Integration Concert",
-		"city":      "Warsaw",
-		"type":      "concert",
+		"eventname":  "Integration Concert",
+		"city":       "Warsaw",
+		"type":       "concert",
+		"start_time": time.Now().Add(2 * time.Hour).Format(time.RFC3339),
 	}
 	body, _ := json.Marshal(newEvent)
 
@@ -140,7 +141,7 @@ func TestIntegration_ListEvents(t *testing.T) {
 
 	// 1. Setup: Create an event so the list is not empty
 	// IMPORTANT: Use trailing slash "/events/" for POST
-	createBody := `{"eventname":"List Me", "city":"Cracow", "price": 50}`
+	createBody := `{"eventname":"List Me", "city":"Cracow", "price": 50, "start_time":"2024-12-31T20:00:00Z", "type":"theater"}`
 	createReq := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(createBody)))
 	wCreate := httptest.NewRecorder()
 	router.ServeHTTP(wCreate, createReq)
@@ -178,7 +179,7 @@ func TestIntegration_UpdateAndDelete(t *testing.T) {
 	defer client.Close()
 
 	// Create
-	createBody := `{"eventname": "To Change", "city": "Old City"}`
+	createBody := `{"eventname":"To Change", "city":"Cracow", "price": 50, "start_time":"2024-12-31T20:00:00Z", "type":"theater"}`
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(createBody))))
 

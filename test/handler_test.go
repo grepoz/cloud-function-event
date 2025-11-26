@@ -223,7 +223,7 @@ func TestTrackingHandler_List(t *testing.T) {
 	}
 
 	item := dataSlice[0].(map[string]interface{})
-	if item["action"] != "signup" {
+	if item["Action"] != "signup" {
 		t.Errorf("Expected action 'signup', got %v", item["action"])
 	}
 }
