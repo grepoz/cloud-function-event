@@ -44,15 +44,23 @@ func (h *TrackingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Router /tracking [post]
 func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
-	var track domain.TrackingEvent
-	if err := json.NewDecoder(r.Body).Decode(&track); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+	var dto domain.TrackingEventDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		respondError(w, domain.ErrValidation("Invalid JSON"))
 		return
+	}
+	if err := domain.Validate.Struct(dto); err != nil {
+		respondError(w, domain.ErrValidation(err.Error()))
+		return
+	}
+	track := domain.TrackingEvent{
+		Action:    dto.Action,
+		Payload:   dto.Payload,
+		UserAgent: dto.UserAgent,
 	}
 	if track.UserAgent == "" {
 		track.UserAgent = r.UserAgent()
 	}
-
 	if err := h.service.TrackEvent(r.Context(), &track); err != nil {
 		respondError(w, err)
 		return

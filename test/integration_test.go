@@ -38,9 +38,10 @@ func setupIntegration(t *testing.T) (http.Handler, *firestore.Client) {
 		t.Fatalf("Failed to create firestore client: %v", err)
 	}
 
-	repos := repository.NewFirestoreRepository(client)
-	eventSvc := service.NewEventService(repos.Events)
-	trackingSvc := service.NewTrackingService(repos.Tracking)
+	eventRepo := repository.NewEventRepository(client)
+	trackingRepo := repository.NewTrackingRepository(client)
+	eventSvc := service.NewEventService(eventRepo)
+	trackingSvc := service.NewTrackingService(trackingRepo)
 
 	router := transport.NewRouter(eventSvc, trackingSvc)
 

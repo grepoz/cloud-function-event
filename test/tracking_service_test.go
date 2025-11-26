@@ -1,4 +1,4 @@
-package service_test
+package test
 
 import (
 	"cloud-function-event/internal/domain"
@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// MockTrackingRepo
+// MockTrackingRepo for tracking tests
 type MockTrackingRepo struct {
 	SaveFunc func(ctx context.Context, t *domain.TrackingEvent) error
 	ListFunc func(ctx context.Context) ([]domain.TrackingEvent, error)
@@ -80,11 +80,11 @@ func TestTrackEvent_Success(t *testing.T) {
 			return nil
 		},
 	}
-	svc := service.NewTrackingService(mockRepo)
 
-	event := &domain.TrackingEvent{Action: "click"}
-	err := svc.TrackEvent(context.Background(), event)
+	svc := service.NewTrackingService(mockRepo)
+	tr := &domain.TrackingEvent{Action: "click", Payload: "data"}
+	err := svc.TrackEvent(context.Background(), tr)
 	if err != nil {
-		t.Errorf("Expected success, got %v", err)
+		t.Errorf("Unexpected error: %v", err)
 	}
 }

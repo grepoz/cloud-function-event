@@ -6,35 +6,35 @@ import (
 
 // Event represents the database entity and the DTO
 type Event struct {
-	ID            string    `json:"id" firestore:"id"`
-	OrganizerName string    `json:"organizer_name" firestore:"organizer_name"`
-	EventName     string    `json:"eventname" firestore:"eventname"`
-	HasTickets    bool      `json:"has_tickets" firestore:"has_tickets"`
-	City          string    `json:"city" firestore:"city"`
-	Country       string    `json:"country" firestore:"country"`
-	FullAddress   string    `json:"full_address" firestore:"full_address"`
-	Latitude      string    `json:"latitude" firestore:"latitude"`
-	Longitude     string    `json:"longitude" firestore:"longitude"`
-	State         string    `json:"state" firestore:"state"`
-	Street        string    `json:"street" firestore:"street"`
-	StartTime     time.Time `json:"start_time" firestore:"start_time"`
-	EndTime       time.Time `json:"end_time" firestore:"end_time"`
-	Timezone      string    `json:"timezone" firestore:"timezone"`
-	EventURL      string    `json:"event_url" firestore:"event_url"`
-	Provider      string    `json:"provider" firestore:"provider"`
-	Price         float64   `json:"price" firestore:"price"`
-	ImageURL      string    `json:"image_url" firestore:"image_url"`
-	Type          string    `json:"type" firestore:"type"`
-	CreatedAt     time.Time `json:"created_at" firestore:"created_at"`
+	ID            string    `firestore:"id"`
+	OrganizerName string    `firestore:"organizer_name"`
+	EventName     string    `firestore:"eventname"`
+	HasTickets    bool      `firestore:"has_tickets"`
+	City          string    `firestore:"city"`
+	Country       string    `firestore:"country"`
+	FullAddress   string    `firestore:"full_address"`
+	Latitude      string    `firestore:"latitude"`
+	Longitude     string    `firestore:"longitude"`
+	State         string    `firestore:"state"`
+	Street        string    `firestore:"street"`
+	StartTime     time.Time `firestore:"start_time"`
+	EndTime       time.Time `firestore:"end_time"`
+	Timezone      string    `firestore:"timezone"`
+	EventURL      string    `firestore:"event_url"`
+	Provider      string    `firestore:"provider"`
+	Price         float64   `firestore:"price"`
+	ImageURL      string    `firestore:"image_url"`
+	Type          string    `firestore:"type"`
+	CreatedAt     time.Time `firestore:"created_at"`
 }
 
 // TrackingEvent represents an analytics or tracking action [NEW]
 type TrackingEvent struct {
-	ID        string    `json:"id" firestore:"id"`
-	Action    string    `json:"action" firestore:"action"`
-	Payload   string    `json:"payload" firestore:"payload"`
-	UserAgent string    `json:"user_agent" firestore:"user_agent"`
-	CreatedAt time.Time `json:"created_at" firestore:"created_at"`
+	ID        string    `firestore:"id"`
+	Action    string    `firestore:"action"`
+	Payload   string    `firestore:"payload"`
+	UserAgent string    `firestore:"user_agent"`
+	CreatedAt time.Time `firestore:"created_at"`
 }
 
 // SearchRequest - helper structure for filters
@@ -60,11 +60,11 @@ type SortRequest struct {
 }
 
 type Meta struct {
-	NextPageToken string `json:"next_page_token,omitempty"`
+	NextPageToken string
 }
 
 type APIResponse struct {
-	Data  interface{} `json:"data,omitempty"`
-	Error string      `json:"error,omitempty"`
-	Meta  *Meta       `json:"meta,omitempty"`
+	Data  interface{}
+	Error string
+	Meta  *Meta
 }

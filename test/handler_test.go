@@ -1,4 +1,4 @@
-package transport_test
+package test
 
 import (
 	"cloud-function-event/internal/domain"
@@ -18,7 +18,7 @@ type MockEventService struct {
 	UpdateFunc func(ctx context.Context, id string, updates map[string]interface{}) error
 	GetFunc    func(ctx context.Context, id string) (*domain.Event, error)
 	DeleteFunc func(ctx context.Context, id string) error
-	ListFunc   func(ctx context.Context, req domain.SearchRequest) ([]domain.Event, string, error)
+	ListFunc   func(ctx context.Context, req domain.SearchRequest) ([]domain.Event, error)
 }
 
 func (m *MockEventService) CreateEvent(ctx context.Context, event *domain.Event) error {
@@ -45,11 +45,11 @@ func (m *MockEventService) DeleteEvent(ctx context.Context, id string) error {
 	}
 	return nil
 }
-func (m *MockEventService) ListEvents(ctx context.Context, req domain.SearchRequest) ([]domain.Event, string, error) {
+func (m *MockEventService) ListEvents(ctx context.Context, req domain.SearchRequest) ([]domain.Event, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx, req)
 	}
-	return nil, "", nil
+	return nil, nil
 }
 
 type MockTrackingService struct {
@@ -72,14 +72,14 @@ func (m *MockTrackingService) GetAllTracking(ctx context.Context) ([]domain.Trac
 
 func TestHandler_ListEvents_QueryParams(t *testing.T) {
 	mockSvc := &MockEventService{
-		ListFunc: func(ctx context.Context, req domain.SearchRequest) ([]domain.Event, string, error) {
+		ListFunc: func(ctx context.Context, req domain.SearchRequest) ([]domain.Event, error) {
 			if req.Filters.City != "Warsaw" {
 				t.Errorf("Expected City 'Warsaw', got '%s'", req.Filters.City)
 			}
 			if req.Filters.MinPrice == nil || *req.Filters.MinPrice != 50.5 {
 				t.Errorf("Expected MinPrice 50.5, got %v", req.Filters.MinPrice)
 			}
-			return []domain.Event{}, "", nil
+			return []domain.Event{}, nil
 		},
 	}
 

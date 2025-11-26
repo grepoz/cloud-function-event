@@ -1,7 +1,7 @@
 # Makefile to automate common Go tasks
 
 .PHONY: tidy test run deploy
-
+#github.com/go-playground/validator/v10
 # Generates the go.sum file and removes unused dependencies
 tidy:
 	go mod tidy

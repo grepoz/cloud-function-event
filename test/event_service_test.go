@@ -1,4 +1,4 @@
-package service_test
+package test
 
 import (
 	"cloud-function-event/internal/domain"
@@ -15,7 +15,7 @@ type MockRepository struct {
 	UpdateFunc  func(ctx context.Context, id string, updates map[string]interface{}) error
 	GetByIDFunc func(ctx context.Context, id string) (*domain.Event, error)
 	DeleteFunc  func(ctx context.Context, id string) error
-	ListFunc    func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error)
+	ListFunc    func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, error)
 }
 
 func (m *MockRepository) Save(ctx context.Context, event *domain.Event) error {
@@ -46,11 +46,11 @@ func (m *MockRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (m *MockRepository) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
+func (m *MockRepository) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx, search)
 	}
-	return nil, "", nil
+	return nil, nil
 }
 
 func TestCreateEvent(t *testing.T) {
@@ -177,28 +177,23 @@ func TestDeleteEvent(t *testing.T) {
 }
 
 func TestListEvents_PageSizeCap(t *testing.T) {
-	// Test sprawdza, czy serwis przycina PageSize do 100
 	mockRepo := &MockRepository{
-		ListFunc: func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
+		ListFunc: func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, error) {
 			if search.Sorting.PageSize != 100 {
 				t.Errorf("Expected PageSize to be capped at 100, got %d", search.Sorting.PageSize)
 			}
-			return []domain.Event{}, "next-token", nil
+			return []domain.Event{}, nil
 		},
 	}
 
 	svc := service.NewEventService(mockRepo)
 
-	// Żądamy 500 elementów
 	req := domain.SearchRequest{
 		Sorting: domain.SortRequest{PageSize: 500},
 	}
 
-	_, token, err := svc.ListEvents(context.Background(), req)
+	_, err := svc.ListEvents(context.Background(), req)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	}
-	if token != "next-token" {
-		t.Errorf("Expected token 'next-token', got %s", token)
 	}
 }

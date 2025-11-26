@@ -45,17 +45,22 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // @Tags events
 // @Accept json
 // @Produce json
-// @Param event body domain.Event true "Event Data"
+// @Param event body domain.EventDTO true "Event Data"
 // @Success 201 {object} domain.APIResponse{data=string} "Returns Event ID"
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Router /events [post]
 func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
-	var event domain.Event
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+	var eventDTO domain.EventDTO
+	if err := json.NewDecoder(r.Body).Decode(&eventDTO); err != nil {
+		respondError(w, domain.ErrValidation("Invalid JSON body"))
 		return
 	}
-	if err := h.service.CreateEvent(r.Context(), &event); err != nil {
+	if err := domain.Validate.Struct(eventDTO); err != nil {
+		respondError(w, domain.ErrValidation(err.Error()))
+		return
+	}
+	event := domain.EventDTOToModel(&eventDTO)
+	if err := h.service.CreateEvent(r.Context(), event); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -76,21 +81,18 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} domain.APIResponse{error=string}
 // @Router /events [put]
 func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
-	// ID is now guaranteed by the route matcher
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "Missing id path parameter", http.StatusBadRequest)
+		respondError(w, domain.ErrValidation("Missing id path parameter"))
 		return
 	}
-
 	var updates map[string]interface{}
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
 	if err := decoder.Decode(&updates); err != nil {
-		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+		respondError(w, domain.ErrValidation("Invalid JSON body"))
 		return
 	}
-
 	for k, v := range updates {
 		if num, ok := v.(json.Number); ok {
 			if f, err := num.Float64(); err == nil {
@@ -98,12 +100,10 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-
 	if err := h.service.UpdateEvent(r.Context(), id, updates); err != nil {
 		respondError(w, err)
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: "Updated successfully"})
 }
@@ -170,17 +170,12 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		Sorting: sorting,
 	}
 
-	events, nextToken, err := h.service.ListEvents(r.Context(), searchReq)
+	events, err := h.service.ListEvents(r.Context(), searchReq)
 	if err != nil {
 		respondError(w, err)
 		return
 	}
-
 	resp := domain.APIResponse{Data: events}
-	if nextToken != "" {
-		resp.Meta = &domain.Meta{NextPageToken: nextToken}
-	}
-
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
@@ -197,10 +192,8 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 // @Router /events/{id} [get]
 func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	// No empty check strictly needed as pattern /{id} requires it,
-	// but good practice if logic changes
 	if id == "" {
-		http.Error(w, "Missing id path parameter", http.StatusBadRequest)
+		respondError(w, domain.ErrValidation("Missing id path parameter"))
 		return
 	}
 
@@ -225,7 +218,7 @@ func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 func (h *EventHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "Missing id path parameter", http.StatusBadRequest)
+		respondError(w, domain.ErrValidation("Missing id path parameter"))
 		return
 	}
 
