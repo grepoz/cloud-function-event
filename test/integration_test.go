@@ -171,6 +171,9 @@ func TestIntegration_ListEvents(t *testing.T) {
 		if len(dataSlice) == 0 {
 			t.Error("Expected non-empty list of events")
 		}
+		if len(dataSlice) != 1 {
+			t.Errorf("Got %d events, expected 1", len(dataSlice))
+		}
 	}
 }
 
