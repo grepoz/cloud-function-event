@@ -14,33 +14,33 @@ definitions:
         type: string
       country:
         type: string
-      created_at:
+      createdAt:
         type: string
-      end_time:
+      endTime:
         type: string
-      event_url:
+      eventName:
         type: string
-      eventname:
+      eventURL:
         type: string
-      full_address:
+      fullAddress:
         type: string
-      has_tickets:
+      hasTickets:
         type: boolean
       id:
         type: string
-      image_url:
+      imageURL:
         type: string
       latitude:
         type: string
       longitude:
         type: string
-      organizer_name:
+      organizerName:
         type: string
       price:
         type: number
       provider:
         type: string
-      start_time:
+      startTime:
         type: string
       state:
         type: string
@@ -51,22 +51,43 @@ definitions:
       type:
         type: string
     type: object
+  domain.EventDTO:
+    properties:
+      city:
+        type: string
+      end_time:
+        type: string
+      eventname:
+        type: string
+      price:
+        minimum: 0
+        type: number
+      start_time:
+        type: string
+      type:
+        type: string
+    required:
+    - city
+    - eventname
+    - start_time
+    - type
+    type: object
   domain.Meta:
     properties:
-      next_page_token:
+      nextPageToken:
         type: string
     type: object
   domain.TrackingEvent:
     properties:
       action:
         type: string
-      created_at:
+      createdAt:
         type: string
       id:
         type: string
       payload:
         type: string
-      user_agent:
+      userAgent:
         type: string
     type: object
 host: 127.0.0.1:5000
@@ -80,38 +101,6 @@ info:
   version: "1.0"
 paths:
   /events:
-    delete:
-      description: Remove an event by ID
-      parameters:
-      - description: Event ID
-        in: query
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/domain.APIResponse'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/domain.APIResponse'
-            - properties:
-                error:
-                  type: string
-              type: object
-      summary: Delete Event
-      tags:
-      - events
     get:
       consumes:
       - application/json
@@ -172,7 +161,7 @@ paths:
         name: event
         required: true
         schema:
-          $ref: '#/definitions/domain.Event'
+          $ref: '#/definitions/domain.EventDTO'
       produces:
       - application/json
       responses:
@@ -197,14 +186,91 @@ paths:
       summary: Create Event
       tags:
       - events
+  /events/{id}:
+    delete:
+      description: Remove an event by ID
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: Delete Event
+      tags:
+      - events
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific event by ID
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Event'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: Get Event
+      tags:
+      - events
     put:
       consumes:
       - application/json
       description: Update specific fields of an event
       parameters:
-      - description: Event ID (can also be in body)
-        in: query
+      - description: Event ID
+        in: path
         name: id
+        required: true
         type: string
       - description: Fields to update
         in: body
@@ -244,50 +310,6 @@ paths:
                   type: string
               type: object
       summary: Update Event
-      tags:
-      - events
-  /events/{id}:
-    get:
-      consumes:
-      - application/json
-      description: Get details of a specific event by ID
-      parameters:
-      - description: Event ID
-        in: query
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/domain.APIResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/domain.Event'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/domain.APIResponse'
-            - properties:
-                error:
-                  type: string
-              type: object
-        "404":
-          description: Not Found
-          schema:
-            allOf:
-            - $ref: '#/definitions/domain.APIResponse'
-            - properties:
-                error:
-                  type: string
-              type: object
-      summary: Get Event
       tags:
       - events
   /tracking:

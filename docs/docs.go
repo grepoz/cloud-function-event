@@ -100,6 +100,148 @@ const docTemplate = `{
                     }
                 }
             },
+            "post": {
+                "description": "Create a new event item",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Create Event",
+                "parameters": [
+                    {
+                        "description": "Event Data",
+                        "name": "event",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.EventDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Returns Event ID",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{id}": {
+            "get": {
+                "description": "Get details of a specific event by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get Event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.Event"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
             "put": {
                 "description": "Update specific fields of an event",
                 "consumes": [
@@ -115,9 +257,10 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Event ID (can also be in body)",
+                        "description": "Event ID",
                         "name": "id",
-                        "in": "query"
+                        "in": "path",
+                        "required": true
                     },
                     {
                         "description": "Fields to update",
@@ -187,68 +330,6 @@ const docTemplate = `{
                     }
                 }
             },
-            "post": {
-                "description": "Create a new event item",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Create Event",
-                "parameters": [
-                    {
-                        "description": "Event Data",
-                        "name": "event",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/domain.Event"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Returns Event ID",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/domain.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/domain.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "error": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
             "delete": {
                 "description": "Remove an event by ID",
                 "produces": [
@@ -263,7 +344,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Event ID",
                         "name": "id",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -288,86 +369,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/domain.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "error": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/events/{id}": {
-            "get": {
-                "description": "Get details of a specific event by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Get Event",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Event ID",
-                        "name": "id",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/domain.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/domain.Event"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/domain.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "error": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
                         "schema": {
                             "allOf": [
                                 {
@@ -510,28 +511,28 @@ const docTemplate = `{
                 "country": {
                     "type": "string"
                 },
-                "created_at": {
+                "createdAt": {
                     "type": "string"
                 },
-                "end_time": {
+                "endTime": {
                     "type": "string"
                 },
-                "event_url": {
+                "eventName": {
                     "type": "string"
                 },
-                "eventname": {
+                "eventURL": {
                     "type": "string"
                 },
-                "full_address": {
+                "fullAddress": {
                     "type": "string"
                 },
-                "has_tickets": {
+                "hasTickets": {
                     "type": "boolean"
                 },
                 "id": {
                     "type": "string"
                 },
-                "image_url": {
+                "imageURL": {
                     "type": "string"
                 },
                 "latitude": {
@@ -540,7 +541,7 @@ const docTemplate = `{
                 "longitude": {
                     "type": "string"
                 },
-                "organizer_name": {
+                "organizerName": {
                     "type": "string"
                 },
                 "price": {
@@ -549,7 +550,7 @@ const docTemplate = `{
                 "provider": {
                     "type": "string"
                 },
-                "start_time": {
+                "startTime": {
                     "type": "string"
                 },
                 "state": {
@@ -566,10 +567,40 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.EventDTO": {
+            "type": "object",
+            "required": [
+                "city",
+                "eventname",
+                "start_time",
+                "type"
+            ],
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "eventname": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.Meta": {
             "type": "object",
             "properties": {
-                "next_page_token": {
+                "nextPageToken": {
                     "type": "string"
                 }
             }
@@ -580,7 +611,7 @@ const docTemplate = `{
                 "action": {
                     "type": "string"
                 },
-                "created_at": {
+                "createdAt": {
                     "type": "string"
                 },
                 "id": {
@@ -589,7 +620,7 @@ const docTemplate = `{
                 "payload": {
                     "type": "string"
                 },
-                "user_agent": {
+                "userAgent": {
                     "type": "string"
                 }
             }

@@ -74,12 +74,12 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 // @Tags events
 // @Accept json
 // @Produce json
-// @Param id query string false "Event ID (can also be in body)"
+// @Param id path string true "Event ID"
 // @Param event body map[string]interface{} true "Fields to update"
 // @Success 200 {object} domain.APIResponse{data=string}
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Failure 500 {object} domain.APIResponse{error=string}
-// @Router /events [put]
+// @Router /events/{id} [put]
 func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
@@ -185,7 +185,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 // @Tags events
 // @Accept json
 // @Produce json
-// @Param id query string true "Event ID"
+// @Param id path string true "Event ID"
 // @Success 200 {object} domain.APIResponse{data=domain.Event}
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Failure 404 {object} domain.APIResponse{error=string}
@@ -211,10 +211,10 @@ func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 // @Description Remove an event by ID
 // @Tags events
 // @Produce json
-// @Param id query string true "Event ID"
+// @Param id path string true "Event ID"
 // @Success 200 {object} domain.APIResponse{data=string}
 // @Failure 400 {object} domain.APIResponse{error=string}
-// @Router /events [delete]
+// @Router /events/{id} [delete]
 func (h *EventHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
