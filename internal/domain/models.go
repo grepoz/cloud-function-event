@@ -56,15 +56,10 @@ type SortRequest struct {
 	SortKey       string
 	SortDirection string
 	PageSize      int
-	PageToken     string
-}
-
-type Meta struct {
-	NextPageToken string
+	PageNumber    int
 }
 
 type APIResponse struct {
 	Data  interface{}
 	Error string
-	Meta  *Meta
 }

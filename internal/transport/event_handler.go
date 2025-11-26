@@ -156,7 +156,6 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	sorting := domain.SortRequest{
 		SortKey:       q.Get("sort_key"),
 		SortDirection: q.Get("sort_dir"),
-		PageToken:     q.Get("page_token"),
 	}
 
 	if size := q.Get("page_size"); size != "" {

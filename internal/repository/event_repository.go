@@ -101,14 +101,6 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	}
 	q = q.Limit(pageSize)
 
-	// Cursor-based pagination (if token provided)
-	if search.Sorting.PageToken != "" {
-		cursor, err := decodeCursor(search.Sorting.PageToken)
-		if err == nil && len(cursor) == 2 {
-			q = q.StartAfter(cursor...)
-		}
-	}
-
 	iter := q.Documents(ctx)
 	defer iter.Stop()
 
