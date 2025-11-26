@@ -153,9 +153,19 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	sortKey := q.Get("sort_key")
+	if sortKey == "" {
+		sortKey = "created_at"
+	}
+
+	sortDir := q.Get("sort_dir")
+	if sortDir == "" {
+		sortDir = "desc"
+	}
+
 	sorting := domain.SortRequest{
-		SortKey:       q.Get("sort_key"),
-		SortDirection: q.Get("sort_dir"),
+		SortKey:       sortKey,
+		SortDirection: sortDir,
 	}
 
 	if size := q.Get("page_size"); size != "" {

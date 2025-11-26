@@ -61,8 +61,10 @@ func (r *eventRepo) Save(ctx context.Context, event *domain.Event) error {
 
 func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, error) {
 	q := r.client.Collection(CollectionEvents).Select()
+
 	f := search.Filters
 
+	// Filters
 	if f.City != "" {
 		q = q.Where("city", "==", f.City)
 	}
@@ -92,15 +94,27 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	}
 
 	// Pagination
-	pageSize := search.Sorting.PageSize
-	if pageSize <= 0 {
-		pageSize = 20 // default
+	limit := search.Sorting.PageSize
+	if limit <= 0 {
+		limit = 20
 	}
-	if pageSize > 100 {
-		pageSize = 100
+	if limit > 100 {
+		limit = 100
 	}
-	q = q.Limit(pageSize)
+	q = q.Limit(limit)
 
+	// TODO: THIS IS SLOW FOR LARGE OFFSETS. CONSIDER USING CURSORS INSTEAD.
+	pageNumber := search.Sorting.PageNumber
+	if pageNumber < 1 {
+		pageNumber = 1
+	}
+
+	offset := (pageNumber - 1) * limit
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+
+	// Read
 	iter := q.Documents(ctx)
 	defer iter.Stop()
 
@@ -113,10 +127,12 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		if err != nil {
 			return nil, err
 		}
+
 		var e domain.Event
 		if err := doc.DataTo(&e); err != nil {
-			continue
+			return nil, err // better to return
 		}
+
 		events = append(events, e)
 	}
 
