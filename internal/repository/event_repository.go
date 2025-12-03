@@ -169,6 +169,8 @@ func getSortValue(e *domain.Event, key string) interface{} {
 		return e.Type
 	case "created_at":
 		return e.CreatedAt
+	case "eventname":
+		return e.EventName
 	default:
 		return e.CreatedAt
 	}
