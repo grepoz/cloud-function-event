@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
@@ -118,6 +119,20 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		if err != nil {
 			return nil, "", fmt.Errorf("invalid page token")
 		}
+
+		if len(cursorVals) > 0 {
+			switch sortKey {
+			case "created_at", "start_time", "end_time":
+				// Check if it's a string and parse it
+				if strVal, ok := cursorVals[0].(string); ok {
+					t, err := time.Parse(time.RFC3339, strVal)
+					if err == nil {
+						cursorVals[0] = t
+					}
+				}
+			}
+		}
+
 		q = q.StartAfter(cursorVals...)
 	}
 

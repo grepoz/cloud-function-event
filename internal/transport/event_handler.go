@@ -160,7 +160,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 
 	sortDir := q.Get("sort_dir")
 	if sortDir == "" {
-		sortDir = "desc"
+		sortDir = "asc"
 	}
 
 	sorting := domain.SortRequest{
