@@ -496,9 +496,6 @@ const docTemplate = `{
                 "data": {},
                 "error": {
                     "type": "string"
-                },
-                "meta": {
-                    "$ref": "#/definitions/domain.Meta"
                 }
             }
         },
@@ -580,7 +577,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "end_time": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2024-07-20T22:00:00Z"
                 },
                 "eventname": {
                     "type": "string"
@@ -590,17 +588,10 @@ const docTemplate = `{
                     "minimum": 0
                 },
                 "start_time": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2024-07-20T22:00:00Z"
                 },
                 "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "domain.Meta": {
-            "type": "object",
-            "properties": {
-                "nextPageToken": {
                     "type": "string"
                 }
             }
