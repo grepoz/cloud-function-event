@@ -45,6 +45,7 @@ type SearchRequest struct {
 
 type FilterRequest struct {
 	City      string
+	EventName string
 	StartDate *time.Time
 	EndDate   *time.Time
 	MinPrice  *float64

@@ -127,8 +127,9 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
 	filters := domain.FilterRequest{
-		City: q.Get("city"),
-		Type: q.Get("type"),
+		City:      q.Get("city"),
+		EventName: q.Get("eventname"),
+		Type:      q.Get("type"),
 	}
 
 	if start := q.Get("start_date"); start != "" {
