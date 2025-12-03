@@ -22,7 +22,11 @@ func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingServic
 	// 2. Fix: Explicitly handle missing slash.
 	// Redirect using 307 (Temporary Redirect) to preserve POST method and body.
 	mux.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/events/", http.StatusTemporaryRedirect)
+		target := "/events/"
+		if len(r.URL.RawQuery) > 0 {
+			target += "?" + r.URL.RawQuery
+		}
+		http.Redirect(w, r, target, http.StatusTemporaryRedirect)
 	})
 
 	// --- Tracking ---
@@ -31,7 +35,11 @@ func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingServic
 
 	// Apply the same fix for tracking
 	mux.HandleFunc("/tracking", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/tracking/", http.StatusTemporaryRedirect)
+		target := "/tracking/"
+		if len(r.URL.RawQuery) > 0 {
+			target += "?" + r.URL.RawQuery
+		}
+		http.Redirect(w, r, target, http.StatusTemporaryRedirect)
 	})
 
 	return mux
