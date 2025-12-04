@@ -46,8 +46,17 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "enum": [
+                            "concert",
+                            "festival",
+                            "theater",
+                            "standup",
+                            "conference",
+                            "meetup",
+                            "other"
+                        ],
                         "type": "string",
-                        "description": "Filter by Type (e.g. concert)",
+                        "description": "Filter by Type",
                         "name": "type",
                         "in": "query"
                     },
@@ -70,8 +79,14 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "End Date (RFC3339)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
-                        "description": "Page Size",
+                        "description": "Page Size (1-100)",
                         "name": "page_size",
                         "in": "query"
                     },
@@ -79,6 +94,18 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Pagination Token",
                         "name": "page_token",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort Key (e.g. price, start_time)",
+                        "name": "sort_key",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort Direction (asc, desc)",
+                        "name": "sort_dir",
                         "in": "query"
                     }
                 ],
@@ -535,7 +562,7 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "imageURL": {
+                "imageUrl": {
                     "type": "string"
                 },
                 "latitude": {
@@ -653,6 +680,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "userAgent": {
+                    "type": "string"
+                },
+                "userName": {
                     "type": "string"
                 }
             }

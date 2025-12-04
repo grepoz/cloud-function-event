@@ -9,6 +9,17 @@ import (
 
 var Validate = validator.New()
 
+func init() {
+	// Register a custom validation tag named "event_type"
+	err := Validate.RegisterValidation("event_type", func(fl validator.FieldLevel) bool {
+		// Convert the field value to your custom type and check validity
+		return EventType(fl.Field().String()).IsValid()
+	})
+	if err != nil {
+		return
+	}
+}
+
 // TrackingEventDTO is used for API input/output
 // Add validation tags for required fields
 // You can extend this DTO as needed
@@ -28,7 +39,7 @@ type TrackingEventDTO struct {
 type EventDTO struct {
 	EventName string    `json:"event_name" validate:"required"`
 	City      string    `json:"city" validate:"required"`
-	Type      EventType `json:"type" validate:"required,oneof=concert festival theater standup conference meetup other" example:"concert"`
+	Type      EventType `json:"type" validate:"required,event_type" example:"concert"`
 	Price     float64   `json:"price" validate:"gte=0"`
 	StartTime string    `json:"start_time" validate:"required,datetime=2006-01-02T15:04:05Z07:00" example:"2024-07-20T22:00:00Z"`
 	EndTime   string    `json:"end_time" validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00" example:"2024-07-20T22:00:00Z"`

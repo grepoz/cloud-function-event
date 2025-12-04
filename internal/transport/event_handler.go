@@ -121,7 +121,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param event_name query string false "Filter by Event Name"
 // @Param city query string false "Filter by City"
-// @Param type query string false "Filter by Type"
+// @Param type query domain.EventType false "Filter by Type"
 // @Param min_price query number false "Minimum Price"
 // @Param max_price query number false "Maximum Price"
 // @Param start_date query string false "Start Date (RFC3339)"

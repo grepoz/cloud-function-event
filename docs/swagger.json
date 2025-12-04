@@ -40,8 +40,17 @@
                         "in": "query"
                     },
                     {
+                        "enum": [
+                            "concert",
+                            "festival",
+                            "theater",
+                            "standup",
+                            "conference",
+                            "meetup",
+                            "other"
+                        ],
                         "type": "string",
-                        "description": "Filter by Type (e.g. concert)",
+                        "description": "Filter by Type",
                         "name": "type",
                         "in": "query"
                     },
@@ -64,8 +73,14 @@
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "End Date (RFC3339)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
-                        "description": "Page Size",
+                        "description": "Page Size (1-100)",
                         "name": "page_size",
                         "in": "query"
                     },
@@ -73,6 +88,18 @@
                         "type": "string",
                         "description": "Pagination Token",
                         "name": "page_token",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort Key (e.g. price, start_time)",
+                        "name": "sort_key",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort Direction (asc, desc)",
+                        "name": "sort_dir",
                         "in": "query"
                     }
                 ],
@@ -125,7 +152,7 @@
                 ],
                 "responses": {
                     "201": {
-                        "description": "Returns Event ID",
+                        "description": "Returns Event Id",
                         "schema": {
                             "allOf": [
                                 {
@@ -165,7 +192,7 @@
         },
         "/events/{id}": {
             "get": {
-                "description": "Get details of a specific event by ID",
+                "description": "Get details of a specific event by Id",
                 "consumes": [
                     "application/json"
                 ],
@@ -179,7 +206,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Event ID",
+                        "description": "Event Id",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -257,7 +284,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Event ID",
+                        "description": "Event Id",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -331,7 +358,7 @@
                 }
             },
             "delete": {
-                "description": "Remove an event by ID",
+                "description": "Remove an event by Id",
                 "produces": [
                     "application/json"
                 ],
@@ -342,7 +369,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Event ID",
+                        "description": "Event Id",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -450,7 +477,7 @@
                 ],
                 "responses": {
                     "201": {
-                        "description": "Returns Tracking Event ID",
+                        "description": "Returns Tracking Event Id",
                         "schema": {
                             "allOf": [
                                 {
@@ -529,7 +556,7 @@
                 "id": {
                     "type": "string"
                 },
-                "imageURL": {
+                "imageUrl": {
                     "type": "string"
                 },
                 "latitude": {
@@ -647,6 +674,9 @@
                     "type": "string"
                 },
                 "userAgent": {
+                    "type": "string"
+                },
+                "userName": {
                     "type": "string"
                 }
             }

@@ -16,6 +16,17 @@ const (
 	TypeOther      EventType = "other"
 )
 
+// AllEventTypes is a registry of all allowed event types
+var AllEventTypes = []EventType{
+	TypeConcert,
+	TypeFestival,
+	TypeTheater,
+	TypeStandUp,
+	TypeConference,
+	TypeMeetup,
+	TypeOther,
+}
+
 // Event represents the database entity and the DTO
 type Event struct {
 	Id            string    `firestore:"id"`
@@ -86,4 +97,13 @@ type APIPaginationResponse struct {
 	Data  interface{} `json:"data,omitempty"`
 	Error string      `json:"error,omitempty"`
 	Meta  *Meta       `json:"meta,omitempty"`
+}
+
+func (e EventType) IsValid() bool {
+	for _, valid := range AllEventTypes {
+		if e == valid {
+			return true
+		}
+	}
+	return false
 }
