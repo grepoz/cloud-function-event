@@ -59,7 +59,9 @@ func init() {
 	functions.HTTP("EventFunction", func(w http.ResponseWriter, r *http.Request) {
 		// 1. Serve Swagger UI at /swagger/
 		if strings.HasPrefix(r.URL.Path, "/swagger/") {
-			httpSwagger.WrapHandler(w, r)
+			httpSwagger.Handler(
+				httpSwagger.DeepLinking(false),
+			)(w, r)
 			return
 		}
 
