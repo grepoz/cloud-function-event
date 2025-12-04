@@ -44,6 +44,7 @@ type Event struct {
 type TrackingEvent struct {
 	ID        string    `firestore:"id"`
 	Action    string    `firestore:"action"`
+	UserName  string    `firestore:"user_name"`
 	Payload   string    `firestore:"payload"`
 	UserAgent string    `firestore:"user_agent"`
 	CreatedAt time.Time `firestore:"created_at"`

@@ -53,20 +53,21 @@ func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		respondError(w, domain.ErrValidation(err.Error()))
 		return
 	}
-	track := domain.TrackingEvent{
+	trackingEvent := domain.TrackingEvent{
 		Action:    dto.Action,
 		Payload:   dto.Payload,
 		UserAgent: dto.UserAgent,
+		UserName:  dto.UserName,
 	}
-	if track.UserAgent == "" {
-		track.UserAgent = r.UserAgent()
+	if trackingEvent.UserAgent == "" {
+		trackingEvent.UserAgent = r.UserAgent()
 	}
-	if err := h.service.TrackEvent(r.Context(), &track); err != nil {
+	if err := h.service.TrackEvent(r.Context(), &trackingEvent); err != nil {
 		respondError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: track.ID})
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: trackingEvent.ID})
 }
 
 // handleList lists all tracking events

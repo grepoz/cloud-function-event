@@ -18,6 +18,7 @@ type TrackingEventDTO struct {
 	Action    string `json:"action" validate:"required"`
 	Payload   string `json:"payload"`
 	UserAgent string `json:"user_agent"`
+	UserName  string `json:"user_name"`
 }
 
 // EventDTO is used for API input/output for events
