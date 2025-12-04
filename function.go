@@ -38,7 +38,9 @@ func init() {
 		log.Printf("GOOGLE_CLOUD_PROJECT not set, using fallback project Id: %s", projectID)
 	}
 
-	client, err := firestore.NewClient(ctx, projectID)
+	databaseId := os.Getenv("FIRESTORE_DATABASE_ID")
+
+	client, err := firestore.NewClientWithDatabase(ctx, projectID, databaseId)
 	if err != nil {
 		log.Fatalf("Failed to create firestore client: %v", err)
 	}
