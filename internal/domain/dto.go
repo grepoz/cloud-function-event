@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -34,13 +35,43 @@ type EventDTO struct {
 	// OrganizerName, Country, etc.
 }
 
-func EventDTOToModel(dto *EventDTO) *Event {
-	// Parse time strings to time.Time
-	// Note: We ignore errors here because the validator should have ensured format is correct
-	startTime, _ := time.Parse(time.RFC3339, dto.StartTime)
+type EventListDTO struct {
+	// Pagination & Sorting
+	PageSize  int    `validate:"gte=1,lte=100"`                                               // Hard limit: 1-100
+	PageToken string `validate:"omitempty,base64"`                                            // Must be valid base64
+	SortDir   string `validate:"omitempty,oneof=asc desc"`                                    // Only "asc" or "desc"
+	SortKey   string `validate:"omitempty,oneof=event_name city price start_time created_at"` // Whitelist allowed columns
+
+	// Filters - Numeric
+	MinPrice *float64 `validate:"omitempty,gte=0"` // Pointer allows distinguishing "0" from "not present"
+	MaxPrice *float64 `validate:"omitempty,gte=0"`
+
+	// Filters - Date (ISO8601/RFC3339)
+	StartDate string `validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
+	EndDate   string `validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
+
+	// Filters - Text
+	City      string `validate:"omitempty,max=50,printascii"` // Prevent huge strings or weird chars
+	EventName string `validate:"omitempty,max=100"`
+	Type      string `validate:"omitempty,oneof=concert festival theater standup conference meetup other"`
+}
+
+func EventDTOToModel(dto *EventDTO) (*Event, error) {
+	startTime, err := time.Parse(time.RFC3339, dto.StartTime)
+	if err != nil {
+		return nil, fmt.Errorf("invalid start_time format: %w", err)
+	}
+
 	var endTime time.Time
 	if dto.EndTime != "" {
-		endTime, _ = time.Parse(time.RFC3339, dto.EndTime)
+		endTime, err = time.Parse(time.RFC3339, dto.EndTime)
+		if err != nil {
+			return nil, fmt.Errorf("invalid end_time format: %w", err)
+		}
+		// Logical check: End before Start
+		if endTime.Before(startTime) {
+			return nil, fmt.Errorf("end_time cannot be before start_time")
+		}
 	}
 
 	return &Event{
@@ -51,5 +82,5 @@ func EventDTOToModel(dto *EventDTO) *Event {
 		StartTime: startTime,
 		EndTime:   endTime,
 		// Map other fields if necessary
-	}
+	}, nil
 }

@@ -63,11 +63,18 @@ func (r *eventRepo) Save(ctx context.Context, event *domain.Event) error {
 }
 
 func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
+
+	validSorts := map[string]bool{
+		"created_at": true, "price": true, "start_time": true,
+		"event_name": true, "city": true,
+	}
+
 	// 1. Determine Sorting FIRST
 	sortKey := search.Sorting.SortKey
-	if sortKey == "" {
-		sortKey = "created_at"
+	if !validSorts[sortKey] {
+		sortKey = "created_at" // Fallback to safe default
 	}
+
 	direction := firestore.Asc
 	if search.Sorting.SortDirection == "desc" {
 		direction = firestore.Desc

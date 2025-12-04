@@ -59,7 +59,12 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		respondError(w, domain.ErrValidation(err.Error()))
 		return
 	}
-	event := domain.EventDTOToModel(&eventDTO)
+	event, err := domain.EventDTOToModel(&eventDTO)
+
+	if err != nil {
+		respondError(w, domain.ErrValidation(err.Error()))
+		return
+	}
 	if err := h.service.CreateEvent(r.Context(), event); err != nil {
 		respondError(w, err)
 		return
@@ -108,7 +113,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: "Updated successfully"})
 }
 
-// handleList lists events with filtering and sorting
+// handleList lists events with strict validation and filtering
 // @Summary List Events
 // @Description Get a list of events with optional filters
 // @Tags events
@@ -116,78 +121,129 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param event_name query string false "Filter by Event Name"
 // @Param city query string false "Filter by City"
-// @Param type query string false "Filter by Type (e.g. concert)"
+// @Param type query string false "Filter by Type"
 // @Param min_price query number false "Minimum Price"
 // @Param max_price query number false "Maximum Price"
 // @Param start_date query string false "Start Date (RFC3339)"
-// @Param page_size query int false "Page Size"
+// @Param end_date query string false "End Date (RFC3339)"
+// @Param page_size query int false "Page Size (1-100)"
 // @Param page_token query string false "Pagination Token"
+// @Param sort_key query string false "Sort Key (e.g. price, start_time)"
+// @Param sort_dir query string false "Sort Direction (asc, desc)"
 // @Success 200 {object} domain.APIResponse{data=[]domain.Event}
 // @Router /events [get]
 func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
-	filters := domain.FilterRequest{
+	// 1. Bind Query Params to DTO
+	// We map strings directly and parse numbers manually to catch type errors early.
+	dto := domain.EventListDTO{
+		PageToken: q.Get("page_token"),
+		SortDir:   q.Get("sort_dir"),
+		SortKey:   q.Get("sort_key"),
+		StartDate: q.Get("start_date"),
+		EndDate:   q.Get("end_date"),
 		City:      q.Get("city"),
 		EventName: q.Get("event_name"),
-		Type:      domain.EventType(q.Get("type")),
+		Type:      q.Get("type"),
 	}
 
-	if start := q.Get("start_date"); start != "" {
-		if t, err := time.Parse(time.RFC3339, start); err == nil {
-			filters.StartDate = &t
+	// Safe Parsing: PageSize
+	if val := q.Get("page_size"); val != "" {
+		i, err := strconv.Atoi(val)
+		if err != nil {
+			respondError(w, domain.ErrValidation("page_size must be a valid integer"))
+			return
 		}
+		dto.PageSize = i
+	} else {
+		dto.PageSize = 20 // Default value
 	}
-	if end := q.Get("end_date"); end != "" {
-		if t, err := time.Parse(time.RFC3339, end); err == nil {
-			filters.EndDate = &t
+
+	// Safe Parsing: MinPrice
+	if val := q.Get("min_price"); val != "" {
+		f, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			respondError(w, domain.ErrValidation("min_price must be a valid number"))
+			return
 		}
+		dto.MinPrice = &f
 	}
 
-	if minP := q.Get("min_price"); minP != "" {
-		if v, err := strconv.ParseFloat(minP, 64); err == nil {
-			filters.MinPrice = &v
+	// Safe Parsing: MaxPrice
+	if val := q.Get("max_price"); val != "" {
+		f, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			respondError(w, domain.ErrValidation("max_price must be a valid number"))
+			return
 		}
-	}
-	if maxP := q.Get("max_price"); maxP != "" {
-		if v, err := strconv.ParseFloat(maxP, 64); err == nil {
-			filters.MaxPrice = &v
-		}
+		dto.MaxPrice = &f
 	}
 
-	sortKey := q.Get("sort_key")
-	if sortKey == "" {
-		sortKey = "created_at"
+	// 2. Struct Validation (Check constraints like gte=0, oneof, etc.)
+	if err := domain.Validate.Struct(dto); err != nil {
+		respondError(w, domain.ErrValidation(err.Error()))
+		return
 	}
 
-	sortDir := q.Get("sort_dir")
-	if sortDir == "" {
-		sortDir = "asc"
+	// 3. Logical Cross-Field Validation
+	if dto.MinPrice != nil && dto.MaxPrice != nil && *dto.MinPrice > *dto.MaxPrice {
+		respondError(w, domain.ErrValidation("min_price cannot be greater than max_price"))
+		return
 	}
 
-	sorting := domain.SortRequest{
-		SortKey:       sortKey,
-		SortDirection: sortDir,
-		PageToken:     q.Get("page_token"),
+	// 4. Convert DTO to Domain Request
+	// Time parsing is safe here because validation ensured the format is correct.
+	var startTime, endTime *time.Time
+
+	if dto.StartDate != "" {
+		t, _ := time.Parse(time.RFC3339, dto.StartDate)
+		startTime = &t
+	}
+	if dto.EndDate != "" {
+		t, _ := time.Parse(time.RFC3339, dto.EndDate)
+		endTime = &t
 	}
 
-	if size := q.Get("page_size"); size != "" {
-		if s, err := strconv.Atoi(size); err == nil {
-			sorting.PageSize = s
-		}
+	if startTime != nil && endTime != nil && endTime.Before(*startTime) {
+		respondError(w, domain.ErrValidation("end_date cannot be before start_date"))
+		return
+	}
+
+	// Set defaults for Sorting if empty (though logic is also in Repo, it's good to be explicit)
+	if dto.SortKey == "" {
+		dto.SortKey = "created_at"
+	}
+	if dto.SortDir == "" {
+		dto.SortDir = "asc"
 	}
 
 	searchReq := domain.SearchRequest{
-		Filters: filters,
-		Sorting: sorting,
+		Filters: domain.FilterRequest{
+			City:      dto.City,
+			EventName: dto.EventName,
+			Type:      domain.EventType(dto.Type), // Safe cast due to validation
+			MinPrice:  dto.MinPrice,
+			MaxPrice:  dto.MaxPrice,
+			StartDate: startTime,
+			EndDate:   endTime,
+		},
+		Sorting: domain.SortRequest{
+			PageSize:      dto.PageSize,
+			PageToken:     dto.PageToken,
+			SortKey:       dto.SortKey,
+			SortDirection: dto.SortDir,
+		},
 	}
 
+	// 5. Call Service
 	events, nextToken, err := h.service.ListEvents(r.Context(), searchReq)
 	if err != nil {
 		respondError(w, err)
 		return
 	}
 
+	// 6. Response
 	resp := domain.APIPaginationResponse{
 		Data: events,
 		Meta: &domain.Meta{
