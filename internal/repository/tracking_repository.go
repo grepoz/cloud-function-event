@@ -24,8 +24,8 @@ func NewTrackingRepository(client *firestore.Client) TrackingRepository {
 }
 
 func (r *trackingRepo) SaveTracking(ctx context.Context, tracking *domain.TrackingEvent) error {
-	if tracking.ID != "" {
-		_, err := r.client.Collection(CollectionTracking).Doc(tracking.ID).Set(ctx, tracking)
+	if tracking.Id != "" {
+		_, err := r.client.Collection(CollectionTracking).Doc(tracking.Id).Set(ctx, tracking)
 		return err
 	}
 	_, _, err := r.client.Collection(CollectionTracking).Add(ctx, tracking)

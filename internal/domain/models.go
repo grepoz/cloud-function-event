@@ -42,7 +42,7 @@ type Event struct {
 
 // TrackingEvent represents an analytics or tracking action
 type TrackingEvent struct {
-	ID        string    `firestore:"id"`
+	Id        string    `firestore:"id"`
 	Action    string    `firestore:"action"`
 	UserName  string    `firestore:"user_name"`
 	Payload   string    `firestore:"payload"`

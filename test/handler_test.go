@@ -185,7 +185,7 @@ func TestEventHandler_Get_NotFound(t *testing.T) {
 
 func TestTrackingHandler_List(t *testing.T) {
 	expectedTracks := []domain.TrackingEvent{
-		{ID: "track_1", Action: "signup"},
+		{Id: "track_1", Action: "signup"},
 	}
 
 	mockTrackSvc := &MockTrackingService{

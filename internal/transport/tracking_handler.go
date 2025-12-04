@@ -40,7 +40,7 @@ func (h *TrackingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param tracking body domain.TrackingEvent true "Tracking Event Data"
-// @Success 201 {object} domain.APIResponse{data=string} "Returns Tracking Event ID"
+// @Success 201 {object} domain.APIResponse{data=string} "Returns Tracking Event Id"
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Router /tracking [post]
 func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +67,7 @@ func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: trackingEvent.ID})
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: trackingEvent.Id})
 }
 
 // handleList lists all tracking events

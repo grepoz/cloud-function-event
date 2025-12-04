@@ -46,7 +46,7 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param event body domain.EventDTO true "Event Data"
-// @Success 201 {object} domain.APIResponse{data=string} "Returns Event ID"
+// @Success 201 {object} domain.APIResponse{data=string} "Returns Event Id"
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Router /events [post]
 func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
@@ -79,7 +79,7 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 // @Tags events
 // @Accept json
 // @Produce json
-// @Param id path string true "Event ID"
+// @Param id path string true "Event Id"
 // @Param event body map[string]interface{} true "Fields to update"
 // @Success 200 {object} domain.APIResponse{data=string}
 // @Failure 400 {object} domain.APIResponse{error=string}
@@ -255,11 +255,11 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 
 // handleGet retrieves a single event
 // @Summary Get Event
-// @Description Get details of a specific event by ID
+// @Description Get details of a specific event by Id
 // @Tags events
 // @Accept json
 // @Produce json
-// @Param id path string true "Event ID"
+// @Param id path string true "Event Id"
 // @Success 200 {object} domain.APIResponse{data=domain.Event}
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Failure 404 {object} domain.APIResponse{error=string}
@@ -282,10 +282,10 @@ func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 
 // handleDelete deletes an event
 // @Summary Delete Event
-// @Description Remove an event by ID
+// @Description Remove an event by Id
 // @Tags events
 // @Produce json
-// @Param id path string true "Event ID"
+// @Param id path string true "Event Id"
 // @Success 200 {object} domain.APIResponse{data=string}
 // @Failure 400 {object} domain.APIResponse{error=string}
 // @Router /events/{id} [delete]

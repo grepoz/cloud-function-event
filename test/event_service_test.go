@@ -13,7 +13,7 @@ func TestCreateEvent(t *testing.T) {
 	mockRepo := &MockRepository{
 		SaveFunc: func(ctx context.Context, event *domain.Event) error {
 			if event.ID == "" {
-				return errors.New("ID was not generated")
+				return errors.New("Id was not generated")
 			}
 			return nil
 		},
@@ -27,7 +27,7 @@ func TestCreateEvent(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 	if event.ID == "" {
-		t.Error("Expected ID to be generated")
+		t.Error("Expected Id to be generated")
 	}
 }
 
@@ -61,10 +61,10 @@ func TestUpdateEvent(t *testing.T) {
 
 	svc := service.NewEventService(mockRepo)
 
-	// Case 1: Missing ID
+	// Case 1: Missing Id
 	err := svc.UpdateEvent(context.Background(), "", map[string]interface{}{"name": "test"})
 	if err == nil {
-		t.Error("Expected error for missing ID on update")
+		t.Error("Expected error for missing Id on update")
 	}
 
 	// Case 2: Empty Updates
@@ -99,7 +99,7 @@ func TestGetEvent(t *testing.T) {
 	// Case 1: Validation
 	_, err := svc.GetEvent(context.Background(), "")
 	if err == nil {
-		t.Error("Expected error for empty ID")
+		t.Error("Expected error for empty Id")
 	}
 
 	// Case 2: Success
@@ -124,7 +124,7 @@ func TestDeleteEvent(t *testing.T) {
 	svc := service.NewEventService(mockRepo)
 
 	if err := svc.DeleteEvent(context.Background(), ""); err == nil {
-		t.Error("Expected error for empty ID")
+		t.Error("Expected error for empty Id")
 	}
 
 	if err := svc.DeleteEvent(context.Background(), "valid"); err != nil {

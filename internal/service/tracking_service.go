@@ -23,8 +23,8 @@ func NewTrackingService(repo repository.TrackingRepository) TrackingService {
 }
 
 func (s *trackingService) TrackEvent(ctx context.Context, event *domain.TrackingEvent) error {
-	if event.ID == "" {
-		event.ID = uuid.New().String()
+	if event.Id == "" {
+		event.Id = uuid.New().String()
 	}
 	if event.CreatedAt.IsZero() {
 		event.CreatedAt = time.Now().UTC()

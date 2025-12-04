@@ -35,7 +35,7 @@ func init() {
 	if projectID == "" {
 		// Fallback for local testing
 		projectID = "local-project-id"
-		log.Printf("GOOGLE_CLOUD_PROJECT not set, using fallback project ID: %s", projectID)
+		log.Printf("GOOGLE_CLOUD_PROJECT not set, using fallback project Id: %s", projectID)
 	}
 
 	client, err := firestore.NewClient(ctx, projectID)

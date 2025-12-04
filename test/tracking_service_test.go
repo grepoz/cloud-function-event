@@ -31,8 +31,8 @@ func (m *MockTrackingRepo) ListTracking(ctx context.Context) ([]domain.TrackingE
 
 func TestGetAllTracking(t *testing.T) {
 	expectedData := []domain.TrackingEvent{
-		{ID: "t1", Action: "click", CreatedAt: time.Now()},
-		{ID: "t2", Action: "view", CreatedAt: time.Now()},
+		{Id: "t1", Action: "click", CreatedAt: time.Now()},
+		{Id: "t2", Action: "view", CreatedAt: time.Now()},
 	}
 
 	mockRepo := &MockTrackingRepo{
@@ -51,8 +51,8 @@ func TestGetAllTracking(t *testing.T) {
 	if len(result) != 2 {
 		t.Errorf("Expected 2 items, got %d", len(result))
 	}
-	if result[0].ID != "t1" {
-		t.Errorf("Expected first item ID 't1', got '%s'", result[0].ID)
+	if result[0].Id != "t1" {
+		t.Errorf("Expected first item Id 't1', got '%s'", result[0].Id)
 	}
 }
 
@@ -71,8 +71,8 @@ func TestTrackEvent_Validation(t *testing.T) {
 func TestTrackEvent_Success(t *testing.T) {
 	mockRepo := &MockTrackingRepo{
 		SaveFunc: func(ctx context.Context, tr *domain.TrackingEvent) error {
-			if tr.ID == "" {
-				return errors.New("ID was not generated")
+			if tr.Id == "" {
+				return errors.New("Id was not generated")
 			}
 			if tr.CreatedAt.IsZero() {
 				return errors.New("CreatedAt was not set")

@@ -131,7 +131,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Returns Event ID",
+                        "description": "Returns Event Id",
                         "schema": {
                             "allOf": [
                                 {
@@ -171,7 +171,7 @@ const docTemplate = `{
         },
         "/events/{id}": {
             "get": {
-                "description": "Get details of a specific event by ID",
+                "description": "Get details of a specific event by Id",
                 "consumes": [
                     "application/json"
                 ],
@@ -185,7 +185,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Event ID",
+                        "description": "Event Id",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -263,7 +263,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Event ID",
+                        "description": "Event Id",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -337,7 +337,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Remove an event by ID",
+                "description": "Remove an event by Id",
                 "produces": [
                     "application/json"
                 ],
@@ -348,7 +348,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Event ID",
+                        "description": "Event Id",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -456,7 +456,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Returns Tracking Event ID",
+                        "description": "Returns Tracking Event Id",
                         "schema": {
                             "allOf": [
                                 {

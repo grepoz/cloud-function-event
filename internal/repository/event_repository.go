@@ -114,7 +114,7 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		q = q.Where("end_time", "<=", *f.EndDate)
 	}
 
-	// 4. Apply Secondary Sort (ID)
+	// 4. Apply Secondary Sort (Id)
 	// We append this to the existing sort order
 	q = q.OrderBy("id", firestore.Asc)
 
