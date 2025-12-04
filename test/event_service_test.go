@@ -12,7 +12,7 @@ import (
 func TestCreateEvent(t *testing.T) {
 	mockRepo := &MockRepository{
 		SaveFunc: func(ctx context.Context, event *domain.Event) error {
-			if event.ID == "" {
+			if event.Id == "" {
 				return errors.New("Id was not generated")
 			}
 			return nil
@@ -26,7 +26,7 @@ func TestCreateEvent(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
-	if event.ID == "" {
+	if event.Id == "" {
 		t.Error("Expected Id to be generated")
 	}
 }
@@ -84,7 +84,7 @@ func TestUpdateEvent(t *testing.T) {
 }
 
 func TestGetEvent(t *testing.T) {
-	expectedEvent := &domain.Event{ID: "123", EventName: "Test Event"}
+	expectedEvent := &domain.Event{Id: "123", EventName: "Test Event"}
 	mockRepo := &MockRepository{
 		GetByIDFunc: func(ctx context.Context, id string) (*domain.Event, error) {
 			if id == "123" {

@@ -70,7 +70,7 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: event.ID})
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: event.Id})
 }
 
 // handleUpdate updates an existing event

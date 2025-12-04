@@ -18,7 +18,7 @@ const (
 
 // Event represents the database entity and the DTO
 type Event struct {
-	ID            string    `firestore:"id"`
+	Id            string    `firestore:"id"`
 	OrganizerName string    `firestore:"organizer_name"`
 	EventName     string    `firestore:"event_name"`
 	HasTickets    bool      `firestore:"has_tickets"`
@@ -35,7 +35,7 @@ type Event struct {
 	EventURL      string    `firestore:"event_url"`
 	Provider      string    `firestore:"provider"`
 	Price         float64   `firestore:"price"`
-	ImageURL      string    `firestore:"image_url"`
+	ImageUrl      string    `firestore:"image_url"`
 	Type          EventType `firestore:"type"`
 	CreatedAt     time.Time `firestore:"created_at"`
 }

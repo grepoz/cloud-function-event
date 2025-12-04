@@ -58,7 +58,7 @@ func (r *eventRepo) Update(ctx context.Context, id string, updates map[string]in
 }
 
 func (r *eventRepo) Save(ctx context.Context, event *domain.Event) error {
-	_, err := r.client.Collection(CollectionEvents).Doc(event.ID).Set(ctx, event)
+	_, err := r.client.Collection(CollectionEvents).Doc(event.Id).Set(ctx, event)
 	return err
 }
 
@@ -179,7 +179,7 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		lastEvent := events[len(events)-1]
 		// We need to encode values for all OrderBy fields: [sortKey, id]
 		val := getSortValue(&lastEvent, sortKey)
-		nextToken = encodeCursor([]interface{}{val, lastEvent.ID})
+		nextToken = encodeCursor([]interface{}{val, lastEvent.Id})
 	}
 
 	return events, nextToken, nil

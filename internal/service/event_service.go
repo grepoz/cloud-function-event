@@ -26,8 +26,8 @@ func NewEventService(repo repository.EventRepository) EventService {
 }
 
 func (s *eventService) CreateEvent(ctx context.Context, event *domain.Event) error {
-	if event.ID == "" {
-		event.ID = uuid.New().String()
+	if event.Id == "" {
+		event.Id = uuid.New().String()
 	}
 	if event.CreatedAt.IsZero() {
 		event.CreatedAt = time.Now().UTC()
