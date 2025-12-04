@@ -91,7 +91,6 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		q = q.Where("city", ">=", f.City)
 		q = q.Where("city", "<=", f.City+lastUtf8Char)
 	}
-	// TODO - make enums for Type
 	if f.Type != "" {
 		q = q.Where("type", "==", f.Type)
 	}
@@ -193,7 +192,7 @@ func getSortValue(e *domain.Event, key string) interface{} {
 		return e.Type
 	case "created_at":
 		return e.CreatedAt
-	case "eventname":
+	case "event_name":
 		return e.EventName
 	default:
 		return e.CreatedAt

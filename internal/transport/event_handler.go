@@ -114,6 +114,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 // @Tags events
 // @Accept json
 // @Produce json
+// @Param event_name query string false "Filter by Event Name"
 // @Param city query string false "Filter by City"
 // @Param type query string false "Filter by Type (e.g. concert)"
 // @Param min_price query number false "Minimum Price"
@@ -128,8 +129,8 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 
 	filters := domain.FilterRequest{
 		City:      q.Get("city"),
-		EventName: q.Get("eventname"),
-		Type:      q.Get("type"),
+		EventName: q.Get("event_name"),
+		Type:      domain.EventType(q.Get("type")),
 	}
 
 	if start := q.Get("start_date"); start != "" {

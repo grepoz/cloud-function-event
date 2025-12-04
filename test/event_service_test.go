@@ -75,7 +75,7 @@ func TestUpdateEvent(t *testing.T) {
 
 	// Case 3: Valid Update
 	updates := map[string]interface{}{
-		"eventname": "Updated Meetup",
+		"event_name": "Updated Meetup",
 	}
 	err = svc.UpdateEvent(context.Background(), "123", updates)
 	if err != nil {

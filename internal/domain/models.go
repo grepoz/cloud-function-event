@@ -4,11 +4,23 @@ import (
 	"time"
 )
 
+type EventType string
+
+const (
+	TypeConcert    EventType = "concert"
+	TypeFestival   EventType = "festival"
+	TypeTheater    EventType = "theater"
+	TypeStandUp    EventType = "standup"
+	TypeConference EventType = "conference"
+	TypeMeetup     EventType = "meetup"
+	TypeOther      EventType = "other"
+)
+
 // Event represents the database entity and the DTO
 type Event struct {
 	ID            string    `firestore:"id"`
 	OrganizerName string    `firestore:"organizer_name"`
-	EventName     string    `firestore:"eventname"`
+	EventName     string    `firestore:"event_name"`
 	HasTickets    bool      `firestore:"has_tickets"`
 	City          string    `firestore:"city"`
 	Country       string    `firestore:"country"`
@@ -24,7 +36,7 @@ type Event struct {
 	Provider      string    `firestore:"provider"`
 	Price         float64   `firestore:"price"`
 	ImageURL      string    `firestore:"image_url"`
-	Type          string    `firestore:"type"`
+	Type          EventType `firestore:"type"`
 	CreatedAt     time.Time `firestore:"created_at"`
 }
 
@@ -50,7 +62,7 @@ type FilterRequest struct {
 	EndDate   *time.Time
 	MinPrice  *float64
 	MaxPrice  *float64
-	Type      string
+	Type      EventType
 }
 
 type SortRequest struct {

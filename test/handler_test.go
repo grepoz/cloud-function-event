@@ -152,7 +152,7 @@ func TestEventHandler_Create_InvalidJSON(t *testing.T) {
 	router := transport.NewRouter(&MockEventService{}, &MockTrackingService{})
 
 	// Send invalid JSON (missing closing brace)
-	body := `{"eventname": "Broken JSON"`
+	body := `{"event_name": "Broken JSON"`
 	req := httptest.NewRequest(http.MethodPost, "/events/", strings.NewReader(body))
 	w := httptest.NewRecorder()
 

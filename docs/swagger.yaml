@@ -47,7 +47,7 @@ definitions:
       timezone:
         type: string
       type:
-        type: string
+        $ref: '#/definitions/domain.EventType'
     type: object
   domain.EventDTO:
     properties:
@@ -56,7 +56,7 @@ definitions:
       end_time:
         example: "2024-07-20T22:00:00Z"
         type: string
-      eventname:
+      event_name:
         type: string
       price:
         minimum: 0
@@ -65,13 +65,41 @@ definitions:
         example: "2024-07-20T22:00:00Z"
         type: string
       type:
-        type: string
+        allOf:
+        - $ref: '#/definitions/domain.EventType'
+        enum:
+        - concert
+        - festival
+        - theater
+        - standup
+        - conference
+        - meetup
+        - other
+        example: concert
     required:
     - city
-    - eventname
+    - event_name
     - start_time
     - type
     type: object
+  domain.EventType:
+    enum:
+    - concert
+    - festival
+    - theater
+    - standup
+    - conference
+    - meetup
+    - other
+    type: string
+    x-enum-varnames:
+    - TypeConcert
+    - TypeFestival
+    - TypeTheater
+    - TypeStandUp
+    - TypeConference
+    - TypeMeetup
+    - TypeOther
   domain.TrackingEvent:
     properties:
       action:
@@ -101,6 +129,10 @@ paths:
       - application/json
       description: Get a list of events with optional filters
       parameters:
+      - description: Filter by Event Name
+        in: query
+        name: event_name
+        type: string
       - description: Filter by City
         in: query
         name: city

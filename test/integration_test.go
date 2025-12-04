@@ -91,7 +91,7 @@ func TestIntegration_CreateAndGetEvent(t *testing.T) {
 	withFirestore(t, func(t *testing.T, router http.Handler, client *firestore.Client) {
 
 		newEvent := map[string]interface{}{
-			"eventname":  "Integration Concert",
+			"event_name": "Integration Concert",
 			"city":       "Warsaw",
 			"type":       "concert",
 			"start_time": time.Now().Add(2 * time.Hour).Format(time.RFC3339),
@@ -141,7 +141,7 @@ func TestIntegration_ListEvents(t *testing.T) {
 
 		// 1. Setup: Create an event so the list is not empty
 		// IMPORTANT: Use trailing slash "/events/" for POST
-		createBody := `{"eventname":"List Me", "city":"Cracow", "price": 50, "start_time":"2024-12-31T20:00:00Z", "type":"theater"}`
+		createBody := `{"event_name":"List Me", "city":"Cracow", "price": 50, "start_time":"2024-12-31T20:00:00Z", "type":"theater"}`
 		createReq := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(createBody)))
 		wCreate := httptest.NewRecorder()
 		router.ServeHTTP(wCreate, createReq)
@@ -182,7 +182,7 @@ func TestIntegration_UpdateAndDelete(t *testing.T) {
 	withFirestore(t, func(t *testing.T, router http.Handler, client *firestore.Client) {
 
 		// Create
-		createBody := `{"eventname":"To Change", "city":"Cracow", "price": 50, "start_time":"2024-12-31T20:00:00Z", "type":"theater"}`
+		createBody := `{"event_name":"To Change", "city":"Cracow", "price": 50, "start_time":"2024-12-31T20:00:00Z", "type":"theater"}`
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(createBody))))
 
@@ -217,7 +217,7 @@ func TestIntegration_Pagination(t *testing.T) {
 		// 1. Prepare data
 		titles := []string{"Page1_A", "Page1_B", "Page2_A", "Page2_B"}
 		for _, title := range titles {
-			body := fmt.Sprintf(`{"eventname": "%s", "city": "PaginationTest", "type": "concert", "start_time": "%s"}`,
+			body := fmt.Sprintf(`{"event_name": "%s", "city": "PaginationTest", "type": "concert", "start_time": "%s"}`,
 				title, time.Now().Add(time.Hour).Format(time.RFC3339))
 
 			req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(body)))
@@ -230,7 +230,7 @@ func TestIntegration_Pagination(t *testing.T) {
 		}
 
 		// 2. Get Page 1
-		reqPage1 := httptest.NewRequest(http.MethodGet, "/events/?city=PaginationTest&page_size=2&sort_key=eventname&sort_dir=asc", nil)
+		reqPage1 := httptest.NewRequest(http.MethodGet, "/events/?city=PaginationTest&page_size=2&sort_key=event_name&sort_dir=asc", nil)
 		wPage1 := httptest.NewRecorder()
 		router.ServeHTTP(wPage1, reqPage1)
 
@@ -251,7 +251,7 @@ func TestIntegration_Pagination(t *testing.T) {
 		token := resp1.Meta.NextPageToken
 
 		// 3. Get Page 2 using Token
-		reqPage2 := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events/?city=PaginationTest&page_size=2&sort_key=eventname&sort_dir=asc&page_token=%s", token), nil)
+		reqPage2 := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/events/?city=PaginationTest&page_size=2&sort_key=event_name&sort_dir=asc&page_token=%s", token), nil)
 		wPage2 := httptest.NewRecorder()
 		router.ServeHTTP(wPage2, reqPage2)
 
@@ -278,13 +278,13 @@ func TestIntegration_ComplexFilter(t *testing.T) {
 	withFirestore(t, func(t *testing.T, router http.Handler, client *firestore.Client) {
 
 		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events/",
-			bytes.NewReader([]byte(`{"eventname": "Cheap Concert", "city": "Gdansk", "type": "concert", "price": 50, "start_time":"2024-12-31T20:00:00Z"}`))))
+			bytes.NewReader([]byte(`{"event_name": "Cheap Concert", "city": "Gdansk", "type": "concert", "price": 50, "start_time":"2024-12-31T20:00:00Z"}`))))
 
 		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events/",
-			bytes.NewReader([]byte(`{"eventname": "Expensive Concert", "city": "Gdansk", "type": "concert", "price": 500, "start_time":"2024-12-31T20:00:00Z"}`))))
+			bytes.NewReader([]byte(`{"event_name": "Expensive Concert", "city": "Gdansk", "type": "concert", "price": 500, "start_time":"2024-12-31T20:00:00Z"}`))))
 
 		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/events/",
-			bytes.NewReader([]byte(`{"eventname": "Puppet Show", "city": "Gdansk", "type": "theater", "price": 40, "start_time":"2024-12-31T20:00:00Z"}`))))
+			bytes.NewReader([]byte(`{"event_name": "Puppet Show", "city": "Gdansk", "type": "theater", "price": 40, "start_time":"2024-12-31T20:00:00Z"}`))))
 
 		// Query
 		req := httptest.NewRequest(http.MethodGet, "/events/?type=concert&max_price=100", nil)

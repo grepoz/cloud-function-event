@@ -35,6 +35,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Filter by Event Name",
+                        "name": "event_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Filter by City",
                         "name": "city",
                         "in": "query"
@@ -560,7 +566,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "type": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.EventType"
                 }
             }
         },
@@ -568,7 +574,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "city",
-                "eventname",
+                "event_name",
                 "start_time",
                 "type"
             ],
@@ -580,7 +586,7 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2024-07-20T22:00:00Z"
                 },
-                "eventname": {
+                "event_name": {
                     "type": "string"
                 },
                 "price": {
@@ -592,9 +598,44 @@ const docTemplate = `{
                     "example": "2024-07-20T22:00:00Z"
                 },
                 "type": {
-                    "type": "string"
+                    "enum": [
+                        "concert",
+                        "festival",
+                        "theater",
+                        "standup",
+                        "conference",
+                        "meetup",
+                        "other"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.EventType"
+                        }
+                    ],
+                    "example": "concert"
                 }
             }
+        },
+        "domain.EventType": {
+            "type": "string",
+            "enum": [
+                "concert",
+                "festival",
+                "theater",
+                "standup",
+                "conference",
+                "meetup",
+                "other"
+            ],
+            "x-enum-varnames": [
+                "TypeConcert",
+                "TypeFestival",
+                "TypeTheater",
+                "TypeStandUp",
+                "TypeConference",
+                "TypeMeetup",
+                "TypeOther"
+            ]
         },
         "domain.TrackingEvent": {
             "type": "object",
