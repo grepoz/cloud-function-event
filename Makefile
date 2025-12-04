@@ -31,7 +31,7 @@ swagger:
 #deploy: tidy
 #	gcloud functions deploy event-function \
 #	--gen2 \
-#	--runtime=go121 \
+#	--runtime=go125 \
 #	--region=us-central1 \
 #	--source=. \
 #	--entry-point=EventFunction \

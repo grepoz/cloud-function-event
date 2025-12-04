@@ -55,9 +55,12 @@ func init() {
 	// Initialize Main Router
 	router := transport.NewRouter(eventSvc, trackingSvc)
 
+	// 1. Read CORS setting from Env (Setup this in Google Cloud Functions variables)
+	corsOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
+
 	// Register Cloud Function
 	functions.HTTP("EventFunction", func(w http.ResponseWriter, r *http.Request) {
-		// 1. Serve Swagger UI at /swagger/
+		// Serve Swagger UI (usually strictly GET, but rarely needs CORS if hosted same-origin)
 		if strings.HasPrefix(r.URL.Path, "/swagger/") {
 			httpSwagger.Handler(
 				httpSwagger.DeepLinking(false),
@@ -65,8 +68,10 @@ func init() {
 			return
 		}
 
-		// 2. Serve Application Logic (with Compression)
-		transport.WithCompression(router).ServeHTTP(w, r)
+		// 2. Serve Application Logic
+		// Chain: CORS -> Compression -> Router
+		handler := transport.WithCORS(transport.WithCompression(router), corsOrigin)
+		handler.ServeHTTP(w, r)
 	})
 }
 

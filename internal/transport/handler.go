@@ -45,6 +45,27 @@ func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingServic
 	return mux
 }
 
+func WithCORS(next http.Handler, origin string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Default to "*" if no origin is specified in env
+		if origin == "" {
+			origin = "*"
+		}
+
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+		// Handle Preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 // respondError is a shared helper for JSON error responses
 func respondError(w http.ResponseWriter, err error) {
 	if _, ok := err.(*domain.ValidationError); ok {
