@@ -80,13 +80,16 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	f := search.Filters
 
 	// 3. Apply Filters
+
+	lastUtf8Char := "\uf8ff"
+
 	if f.EventName != "" {
 		q = q.Where("event_name", ">=", f.EventName)
-		q = q.Where("event_name", "<=", f.EventName+"\uf8ff")
+		q = q.Where("event_name", "<=", f.EventName+lastUtf8Char)
 	}
 	if f.City != "" {
 		q = q.Where("city", ">=", f.City)
-		q = q.Where("city", "<=", f.City+"\uf8ff")
+		q = q.Where("city", "<=", f.City+lastUtf8Char)
 	}
 	// TODO - make enums for Type
 	if f.Type != "" {
