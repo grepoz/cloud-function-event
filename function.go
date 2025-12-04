@@ -45,12 +45,12 @@ func init() {
 	println("Firestore client initialized")
 
 	// Initialize Repositories (Returns generic container for Events & Tracking)
-	event_repository := repository.NewEventRepository(client)
-	tracking_repository := repository.NewTrackingRepository(client)
+	eventRepository := repository.NewEventRepository(client)
+	trackingRepository := repository.NewTrackingRepository(client)
 
 	// Initialize Services
-	eventSvc := service.NewEventService(event_repository)
-	trackingSvc := service.NewTrackingService(tracking_repository)
+	eventSvc := service.NewEventService(eventRepository)
+	trackingSvc := service.NewTrackingService(trackingRepository)
 
 	// Initialize Main Router
 	router := transport.NewRouter(eventSvc, trackingSvc)
