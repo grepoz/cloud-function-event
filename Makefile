@@ -1,9 +1,14 @@
 # Makefile to automate common Go tasks
 
-.PHONY: tidy test run deploy
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
 
-GOOGLE_CLOUD_PROJECT = local-project-id # bibently-firebase
-FIRESTORE_ADMIN_UID = admin_user_xyz_123_secret_id
+.PHONY: tidy test run deploy rules
+
+GOOGLE_CLOUD_PROJECT ?= local-project-id # bibently-firebase
+FIRESTORE_ADMIN_UID ?= admin_user_xyz_123_secret_id
 
 # Generates the go.sum file and removes unused dependencies
 tidy:
@@ -15,14 +20,17 @@ test: tidy
 
 # Uruchamia testy integracyjne (wymaga uruchomionego emulatora w innym terminalu)
 test-integration: tidy
-	FIRESTORE_EMULATOR_HOST="localhost:8080" GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) go test ./test/... -v -count=1
+	FIRESTORE_EMULATOR_HOST="localhost:8080" \
+	GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) \
+	FIRESTORE_ADMIN_UID=$(FIRESTORE_ADMIN_UID) \
+	go test ./test/... -v -count=1
 
 rules:
 	@echo "Generating firestore.rules..."
 	sed "s/YOUR_ADMIN_UID_HERE/$(FIRESTORE_ADMIN_UID)/g" firestore.rules.template > firestore.rules
 
 # start firestore emulator
-start-emulator:
+start-emulator: rules
 	firebase emulators:start --only firestore --project=$(GOOGLE_CLOUD_PROJECT)
 
 # Helper to run the function locally with emulator
