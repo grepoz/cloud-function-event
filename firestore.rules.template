@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read: if true;
+      // The Makefile will replace "YOUR_ADMIN_UID_HERE" with the real ID
+      allow write: if request.auth != nil && request.auth.uid == "YOUR_ADMIN_UID_HERE";
+    }
+  }
+}
