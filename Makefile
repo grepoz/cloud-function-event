@@ -1,6 +1,9 @@
 # Makefile to automate common Go tasks
 
 .PHONY: tidy test run deploy
+
+project_id = local-project-id # bibently-firebase
+
 # Generates the go.sum file and removes unused dependencies
 tidy:
 	go mod tidy
@@ -14,7 +17,6 @@ test-integration: tidy
 	FIRESTORE_EMULATOR_HOST="localhost:8080" GOOGLE_CLOUD_PROJECT=$(project_id) go test ./test/... -v -count=1
 
 # start firestore emulator
-project_id = bibently-firebase # local-project-id
 start-emulator:
 	firebase emulators:start --only firestore --project=$(project_id)
 
@@ -40,3 +42,4 @@ deploy: tidy
 	--entry-point=EventFunction \
 	--trigger-http \
 	--allow-unauthenticated
+#	--set-env-vars=$(shell grep -v '^#' .env | xargs | tr ' ' ',')

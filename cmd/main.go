@@ -4,6 +4,10 @@ import (
 	"log"
 	"os"
 
+	// 1. Load .env BEFORE importing the function package
+	// This ensures env vars are available when function.init() runs
+	_ "github.com/joho/godotenv/autoload"
+
 	// Blank-import the function package so the init() runs
 	_ "cloud-function-event"
 
