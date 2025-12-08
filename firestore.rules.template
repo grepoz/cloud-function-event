@@ -4,7 +4,7 @@ service cloud.firestore {
     match /{document=**} {
       allow read: if true;
       // The Makefile will replace "YOUR_ADMIN_UID_HERE" with the real ID
-      allow write: if request.auth != nil && request.auth.uid == "YOUR_ADMIN_UID_HERE";
+      allow write: if request.auth != null && request.auth.uid == "YOUR_ADMIN_UID_HERE";
     }
   }
 }
