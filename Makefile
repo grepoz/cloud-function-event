@@ -7,11 +7,6 @@ endif
 
 .PHONY: tidy test run deploy rules
 
-GOOGLE_CLOUD_PROJECT ?= local-project-id # bibently-firebase
-FIRESTORE_ADMIN_UID ?= admin_user_xyz_123_secret_id
-FIRESTORE_EMULATOR_HOST ?= localhost:8080
-FIRESTORE_DATABASE_ID ?= local-bibently-store
-
 # Generates the go.sum file and removes unused dependencies
 tidy:
 	go mod tidy
