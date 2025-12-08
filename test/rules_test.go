@@ -6,16 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 )
 
 // TestFirestoreSecurityRules verifies that firestore.rules are enforced correctly.
 // It bypasses the Go Admin Client (which ignores rules) and hits the Emulator REST API directly.
 func TestFirestoreSecurityRules(t *testing.T) {
-	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	adminUID := os.Getenv("FIRESTORE_ADMIN_UID")
-	emulatorHost := os.Getenv("FIRESTORE_EMULATOR_HOST")
+	projectID := "local-project-id"            // os.Getenv("GOOGLE_CLOUD_PROJECT")
+	adminUID := "admin_user_xyz_123_secret_id" // os.Getenv("FIRESTORE_ADMIN_UID")
+	emulatorHost := "localhost:8080"           // os.Getenv("FIRESTORE_EMULATOR_HOST")
 
 	if emulatorHost == "" {
 		t.Skip("Skipping security rules test: FIRESTORE_EMULATOR_HOST not set")

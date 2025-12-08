@@ -9,6 +9,7 @@ endif
 
 GOOGLE_CLOUD_PROJECT ?= local-project-id # bibently-firebase
 FIRESTORE_ADMIN_UID ?= admin_user_xyz_123_secret_id
+FIRESTORE_EMULATOR_HOST ?= localhost:8080
 
 # Generates the go.sum file and removes unused dependencies
 tidy:
@@ -20,7 +21,7 @@ test: tidy
 
 # Uruchamia testy integracyjne (wymaga uruchomionego emulatora w innym terminalu)
 test-integration: tidy
-	FIRESTORE_EMULATOR_HOST="localhost:8080" \
+	FIRESTORE_EMULATOR_HOST=$(FIRESTORE_EMULATOR_HOST) \
 	GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) \
 	FIRESTORE_ADMIN_UID=$(FIRESTORE_ADMIN_UID) \
 	go test ./test/... -v -count=1
@@ -35,7 +36,7 @@ start-emulator: rules
 
 # Helper to run the function locally with emulator
 run: tidy
-	FIRESTORE_EMULATOR_HOST="localhost:8080" GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=EventFunction LOCAL_ONLY=true go run cmd/main.go
+	FIRESTORE_EMULATOR_HOST=$(FIRESTORE_EMULATOR_HOST) GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=EventFunction LOCAL_ONLY=true go run cmd/main.go
 
 run-real: tidy
 	GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=EventFunction LOCAL_ONLY=true FIRESTORE_DATABASE_ID="bibently-store" go run cmd/main.go
