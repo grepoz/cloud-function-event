@@ -60,6 +60,10 @@ func init() {
 	// 1. Read CORS setting from Env (Setup this in Google Cloud Functions variables)
 	corsOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
 
+	// 2. Read Your New "Control" Switch
+	// If "true", guests can read. If "false" (or missing), strict Mode (Option A) is active.
+	publicReadAccess := os.Getenv("FIRESTORE_PUBLIC_READ_ACCESS") == "true"
+
 	// Register Cloud Function
 	functions.HTTP("EventFunction", func(w http.ResponseWriter, r *http.Request) {
 		// Serve Swagger UI (usually strictly GET, but rarely needs CORS if hosted same-origin)
@@ -70,10 +74,20 @@ func init() {
 			return
 		}
 
-		// 2. Serve Application Logic
-		// Chain: CORS -> Compression -> Router
-		handler := transport.WithCORS(transport.WithCompression(router), corsOrigin)
-		handler.ServeHTTP(w, r)
+		// 3. Construct the Middleware Chain
+		// Order: CORS -> Auth Gatekeeper -> Compression -> Router
+		// We place Auth inside CORS so preflight checks (OPTIONS) still work.
+
+		// Wrap the router with Compression
+		compressedHandler := transport.WithCompression(router)
+
+		// Wrap with your new Auth/Guest Logic
+		protectedHandler := transport.WithAuthProtection(compressedHandler, publicReadAccess)
+
+		// Wrap with CORS (Outer layer)
+		finalHandler := transport.WithCORS(protectedHandler, corsOrigin)
+
+		finalHandler.ServeHTTP(w, r)
 	})
 }
 
