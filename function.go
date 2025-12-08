@@ -11,11 +11,11 @@ import (
 	"strings"
 
 	"cloud.google.com/go/firestore"
+	firebase "firebase.google.com/go/v4" // <--- Import Firebase
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 
-	_ "cloud-function-event/docs" // This import is required for the side-effect of registering docs
+	_ "cloud-function-event/docs"
 
-	// Import swagger deps
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -23,73 +23,67 @@ import (
 // @version 1.0
 // @description API for managing events in Firestore (Google Cloud Function).
 
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
-
 // @host 127.0.0.1:5000
 // @BasePath /
 func init() {
-	// Initialize Firestore Client
 	ctx := context.Background()
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+
+	// 1. Initialize Firestore
+	databaseId := os.Getenv("FIRESTORE_DATABASE_ID")
+	// Note: In Cloud Functions, projectID is often auto-detected,
+	// but we pass it explicitly if needed for local fallback.
 	if projectID == "" {
-		// Fallback for local testing
 		projectID = "local-project-id"
-		log.Printf("GOOGLE_CLOUD_PROJECT not set, using fallback project Id: %s", projectID)
 	}
 
-	databaseId := os.Getenv("FIRESTORE_DATABASE_ID")
-
-	client, err := firestore.NewClientWithDatabase(ctx, projectID, databaseId)
+	fsClient, err := firestore.NewClientWithDatabase(ctx, projectID, databaseId)
 	if err != nil {
 		log.Fatalf("Failed to create firestore client: %v", err)
 	}
-	println("Firestore client initialized")
 
-	// Initialize Repositories (Returns generic container for Events & Tracking)
-	eventRepository := repository.NewEventRepository(client)
-	trackingRepository := repository.NewTrackingRepository(client)
+	// 2. Initialize Firebase Auth (NEW)
+	// We use the same project ID for Firebase Auth
+	conf := &firebase.Config{ProjectID: projectID}
+	app, err := firebase.NewApp(ctx, conf)
+	if err != nil {
+		log.Fatalf("error initializing firebase app: %v", err)
+	}
 
-	// Initialize Services
-	eventSvc := service.NewEventService(eventRepository)
-	trackingSvc := service.NewTrackingService(trackingRepository)
+	authClient, err := app.Auth(ctx)
+	if err != nil {
+		log.Fatalf("error getting auth client: %v", err)
+	}
 
-	// Initialize Main Router
+	// 3. Initialize Domain Layers
+	eventRepo := repository.NewEventRepository(fsClient)
+	trackingRepo := repository.NewTrackingRepository(fsClient)
+
+	eventSvc := service.NewEventService(eventRepo)
+	trackingSvc := service.NewTrackingService(trackingRepo)
+
 	router := transport.NewRouter(eventSvc, trackingSvc)
 
-	// 1. Read CORS setting from Env (Setup this in Google Cloud Functions variables)
+	// 4. Configuration
 	corsOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
-
-	// 2. Read Your New "Control" Switch
-	// If "true", guests can read. If "false" (or missing), strict Mode (Option A) is active.
 	publicReadAccess := os.Getenv("FIRESTORE_PUBLIC_READ_ACCESS") == "true"
 
-	// Register Cloud Function
+	// 5. Register Function
 	functions.HTTP("EventFunction", func(w http.ResponseWriter, r *http.Request) {
-		// Serve Swagger UI (usually strictly GET, but rarely needs CORS if hosted same-origin)
 		if strings.HasPrefix(r.URL.Path, "/swagger/") {
-			httpSwagger.Handler(
-				httpSwagger.DeepLinking(false),
-			)(w, r)
+			httpSwagger.Handler(httpSwagger.DeepLinking(false))(w, r)
 			return
 		}
 
-		// 3. Construct the Middleware Chain
-		// Order: CORS -> Auth Gatekeeper -> Compression -> Router
-		// We place Auth inside CORS so preflight checks (OPTIONS) still work.
-
-		// Wrap the router with Compression
+		// Middleware Chain:
+		// CORS -> Auth (w/ Client) -> Compression -> Router
 		compressedHandler := transport.WithCompression(router)
 
-		// Wrap with your new Auth/Guest Logic
-		protectedHandler := transport.WithAuthProtection(compressedHandler, publicReadAccess)
+		// PASS THE AUTH CLIENT HERE
+		protectedHandler := transport.WithAuthProtection(compressedHandler, authClient, publicReadAccess)
 
-		// Wrap with CORS (Outer layer)
 		finalHandler := transport.WithCORS(protectedHandler, corsOrigin)
 
 		finalHandler.ServeHTTP(w, r)
 	})
 }
-
-// NOTE: Cloud Functions V2 Entry point is registered via the functions-framework in `init`.
-// When deploying, you specify --entry-point=EventFunction

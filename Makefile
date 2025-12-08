@@ -49,8 +49,8 @@ swagger:
 deploy: tidy rules
 	gcloud functions deploy event-function \
 	--gen2 \
-	--runtime=go122 \
-	--region=us-central1 \
+	--runtime=go125 \
+	--region=europe-west1 \
 	--source=. \
 	--entry-point=$(FUNCTION_TARGET) \
 	--trigger-http \
