@@ -29,13 +29,16 @@ rules:
 	sed -e "s/YOUR_ADMIN_UID_HERE/$(FIRESTORE_ADMIN_UID)/g" \
 	    -e "s/{database}/$(FIRESTORE_DATABASE_ID)/g" firestore.rules.template > firestore.rules
 
+generate-fake-token:
+	go run ./cmd/generate_fake_auth_token_for_emulator.go
+
 # start firestore emulator
-start-emulator: rules
-	FIRESTORE_DATABASE_ID=$(FIRESTORE_DATABASE_ID) firebase emulators:start --only firestore --project=$(GOOGLE_CLOUD_PROJECT)
+start-emulators: rules
+	FIRESTORE_DATABASE_ID=$(FIRESTORE_DATABASE_ID) firebase emulators:start --only firestore,auth --project=$(GOOGLE_CLOUD_PROJECT)
 
 # Helper to run the function locally with emulator
 run: tidy
-	FIRESTORE_EMULATOR_HOST=$(FIRESTORE_EMULATOR_HOST) FIRESTORE_DATABASE_ID=$(FIRESTORE_DATABASE_ID) GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=EventFunction LOCAL_ONLY=true go run cmd/main.go
+	FIREBASE_AUTH_EMULATOR_HOST=$(FIREBASE_AUTH_EMULATOR_HOST) FIRESTORE_EMULATOR_HOST=$(FIRESTORE_EMULATOR_HOST) FIRESTORE_DATABASE_ID=$(FIRESTORE_DATABASE_ID) GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=EventFunction LOCAL_ONLY=true go run cmd/main.go
 
 run-real: tidy
 	GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=EventFunction LOCAL_ONLY=true FIRESTORE_DATABASE_ID="bibently-store" go run cmd/main.go

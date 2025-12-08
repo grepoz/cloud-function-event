@@ -67,14 +67,6 @@ definitions:
       type:
         allOf:
         - $ref: '#/definitions/domain.EventType'
-        enum:
-        - concert
-        - festival
-        - theater
-        - standup
-        - conference
-        - meetup
-        - other
         example: concert
     required:
     - city
@@ -119,9 +111,6 @@ host: 127.0.0.1:5000
 info:
   contact: {}
   description: API for managing events in Firestore (Google Cloud Function).
-  license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
   title: Cloud Function Event API
   version: "1.0"
 paths:
@@ -197,6 +186,8 @@ paths:
                     $ref: '#/definitions/domain.Event'
                   type: array
               type: object
+      security:
+      - BearerAuth: []
       summary: List Events
       tags:
       - events
@@ -232,6 +223,8 @@ paths:
                 error:
                   type: string
               type: object
+      security:
+      - BearerAuth: []
       summary: Create Event
       tags:
       - events
@@ -265,6 +258,8 @@ paths:
                 error:
                   type: string
               type: object
+      security:
+      - BearerAuth: []
       summary: Delete Event
       tags:
       - events
@@ -308,6 +303,8 @@ paths:
                 error:
                   type: string
               type: object
+      security:
+      - BearerAuth: []
       summary: Get Event
       tags:
       - events
@@ -358,6 +355,8 @@ paths:
                 error:
                   type: string
               type: object
+      security:
+      - BearerAuth: []
       summary: Update Event
       tags:
       - events
@@ -380,6 +379,8 @@ paths:
                     $ref: '#/definitions/domain.TrackingEvent'
                   type: array
               type: object
+      security:
+      - BearerAuth: []
       summary: List Tracking Events
       tags:
       - tracking
@@ -415,7 +416,14 @@ paths:
                 error:
                   type: string
               type: object
+      security:
+      - BearerAuth: []
       summary: Create Tracking Event
       tags:
       - tracking
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

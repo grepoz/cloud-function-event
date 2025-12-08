@@ -10,10 +10,6 @@ const docTemplate = `{
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
         "contact": {},
-        "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -21,6 +17,11 @@ const docTemplate = `{
     "paths": {
         "/events": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get a list of events with optional filters",
                 "consumes": [
                     "application/json"
@@ -134,6 +135,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new event item",
                 "consumes": [
                     "application/json"
@@ -198,6 +204,11 @@ const docTemplate = `{
         },
         "/events/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get details of a specific event by Id",
                 "consumes": [
                     "application/json"
@@ -276,6 +287,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update specific fields of an event",
                 "consumes": [
                     "application/json"
@@ -364,6 +380,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Remove an event by Id",
                 "produces": [
                     "application/json"
@@ -423,6 +444,11 @@ const docTemplate = `{
         },
         "/tracking": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get a list of all tracking events",
                 "consumes": [
                     "application/json"
@@ -459,6 +485,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new tracking event",
                 "consumes": [
                     "application/json"
@@ -625,15 +656,6 @@ const docTemplate = `{
                     "example": "2024-07-20T22:00:00Z"
                 },
                 "type": {
-                    "enum": [
-                        "concert",
-                        "festival",
-                        "theater",
-                        "standup",
-                        "conference",
-                        "meetup",
-                        "other"
-                    ],
                     "allOf": [
                         {
                             "$ref": "#/definitions/domain.EventType"
@@ -686,6 +708,13 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

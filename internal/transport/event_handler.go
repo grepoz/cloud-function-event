@@ -45,6 +45,7 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // @Tags events
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param event body domain.EventDTO true "Event Data"
 // @Success 201 {object} domain.APIResponse{data=string} "Returns Event Id"
 // @Failure 400 {object} domain.APIResponse{error=string}
@@ -79,6 +80,7 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 // @Tags events
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Event Id"
 // @Param event body map[string]interface{} true "Fields to update"
 // @Success 200 {object} domain.APIResponse{data=string}
@@ -119,6 +121,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 // @Tags events
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param event_name query string false "Filter by Event Name"
 // @Param city query string false "Filter by City"
 // @Param type query domain.EventType false "Filter by Type"
@@ -259,6 +262,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 // @Tags events
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Event Id"
 // @Success 200 {object} domain.APIResponse{data=domain.Event}
 // @Failure 400 {object} domain.APIResponse{error=string}
@@ -285,6 +289,7 @@ func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 // @Description Remove an event by Id
 // @Tags events
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Event Id"
 // @Success 200 {object} domain.APIResponse{data=string}
 // @Failure 400 {object} domain.APIResponse{error=string}
