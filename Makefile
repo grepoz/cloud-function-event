@@ -58,6 +58,7 @@ deploy: tidy rules
 	--entry-point=$(FUNCTION_TARGET) \
 	--trigger-http \
 	--allow-unauthenticated \
+	--set-env-vars APP_ENV=production \
 #	--set-env-vars=$(shell grep -v '^#' .env | xargs | tr ' ' ',')
 
 	# Deploy the generated rules to Firestore

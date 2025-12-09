@@ -71,6 +71,8 @@ func init() {
 	// 4. Configuration
 	corsOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
 
+	isProduction := os.Getenv("APP_ENV") == "production"
+
 	// 5. Register Function
 	functions.HTTP("EventFunction", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/swagger/") {
@@ -88,7 +90,7 @@ func init() {
 		handler = transport.WithAuthProtection(handler, authClient)
 
 		// 3. Wrap with Security Headers (NEW)
-		handler = transport.WithSecurityHeaders(handler)
+		handler = transport.WithSecurityHeaders(handler, isProduction)
 
 		// 4. Wrap with CORS (Outer-most layer to handle OPTIONS requests)
 		handler = transport.WithCORS(handler, corsOrigin)
