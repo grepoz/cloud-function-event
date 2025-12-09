@@ -2,16 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1. PUBLIC READ ACCESS: Only for the 'events' collection
-    match /events/{event} {
-      allow read: if true;
-    }
-
-    // 2. ADMIN WRITE ACCESS: Applies to ALL collections (events, tracking, etc.)
-    // We use a recursive wildcard {document=**} to cover the whole DB.
+    // Match ALL documents in the database recursively
     match /{document=**} {
-      allow write: if request.auth != null && request.auth.uid == "YOUR_ADMIN_UID_HERE";
-      // Implicitly, 'allow read' is false here because it's not listed.
+
+      // Allow read/write ONLY if the user is authenticated
+      // AND their UID matches your specific Admin UID.
+      // Everyone else (unauthenticated or other users) is denied.
+      allow read, write: if request.auth != null && request.auth.uid == "YOUR_ADMIN_UID_HERE";
     }
   }
 }
