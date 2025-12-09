@@ -4,6 +4,7 @@ import (
 	"cloud-function-event/internal/domain"
 	"cloud-function-event/internal/service"
 	"encoding/json"
+	"log" // <--- Added log import
 	"net/http"
 	"strings"
 
@@ -68,14 +69,28 @@ func WithCORS(next http.Handler, origin string) http.Handler {
 
 // respondError is a shared helper for JSON error responses
 func respondError(w http.ResponseWriter, err error) {
+	// 1. Handle Validation Errors (400 Bad Request)
 	if _, ok := err.(*domain.ValidationError); ok {
 		w.WriteHeader(http.StatusBadRequest)
-	} else if err.Error() == "event not found" {
-		w.WriteHeader(http.StatusNotFound)
-	} else {
-		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
+		return
 	}
-	_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
+
+	// 2. Handle Not Found (404 Not Found)
+	// Ideally, define a custom ErrNotFound type in domain/errors.go for cleaner checks
+	if err.Error() == "event not found" {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
+		return
+	}
+
+	// 3. Handle Internal Errors (500 Internal Server Error)
+	// Log the REAL error for the developer
+	log.Printf("SERVER ERROR: %v", err)
+
+	// Send a GENERIC error to the client to prevent info leakage
+	w.WriteHeader(http.StatusInternalServerError)
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: "Internal Server Error"})
 }
 
 // WithCompression is a middleware for Brotli compression
