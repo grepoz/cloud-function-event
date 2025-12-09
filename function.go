@@ -80,14 +80,20 @@ func init() {
 		}
 
 		// Middleware Chain:
-		// CORS -> Auth (w/ Client) -> Compression -> Router
-		compressedHandler := transport.WithCompression(router)
+		// CORS -> Security Headers -> Auth -> Compression -> Router
 
-		// PASS THE AUTH CLIENT HERE
-		protectedHandler := transport.WithAuthProtection(compressedHandler, authClient, publicReadAccess)
+		// 1. Wrap Router with Compression
+		handler := transport.WithCompression(router)
 
-		finalHandler := transport.WithCORS(protectedHandler, corsOrigin)
+		// 2. Wrap with Auth
+		handler = transport.WithAuthProtection(handler, authClient, publicReadAccess)
 
-		finalHandler.ServeHTTP(w, r)
+		// 3. Wrap with Security Headers (NEW)
+		handler = transport.WithSecurityHeaders(handler)
+
+		// 4. Wrap with CORS (Outer-most layer to handle OPTIONS requests)
+		handler = transport.WithCORS(handler, corsOrigin)
+
+		handler.ServeHTTP(w, r)
 	})
 }
