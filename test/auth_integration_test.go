@@ -62,7 +62,7 @@ func ensureUserExists(ctx context.Context, client *auth.Client, uid string) erro
 	return err
 }
 
-func setupAuthIntegration(t *testing.T, publicReadAccess bool) (http.Handler, *firestore.Client) {
+func setupAuthIntegration(t *testing.T) (http.Handler, *firestore.Client) {
 	t.Helper()
 
 	// 1. Force Emulator Hosts
@@ -101,23 +101,22 @@ func setupAuthIntegration(t *testing.T, publicReadAccess bool) (http.Handler, *f
 	trackingSvc := service.NewTrackingService(trackingRepo)
 
 	router := transport.NewRouter(eventSvc, trackingSvc)
-	protectedHandler := transport.WithAuthProtection(router, authClient, publicReadAccess)
+	protectedHandler := transport.WithAuthProtection(router, authClient)
 
 	return protectedHandler, client
 }
 
-// TestAuth_Strict_Blocking: Public Read = FALSE
 func TestAuth_Strict_Blocking(t *testing.T) {
-	handler, client := setupAuthIntegration(t, false)
+	handler, client := setupAuthIntegration(t)
 	t.Cleanup(func() { client.Close() })
 
-	t.Run("Block_Unauthenticated_Read", func(t *testing.T) {
+	t.Run("Allow_Unauthenticated_Read", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/events/", nil)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
 
-		if w.Code != http.StatusUnauthorized {
-			t.Errorf("Expected 401 Unauthorized, got %d. Body: %s", w.Code, w.Body.String())
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected 200 OK, got %d", w.Code)
 		}
 	})
 
@@ -135,7 +134,7 @@ func TestAuth_Strict_Blocking(t *testing.T) {
 
 // TestAuth_Authenticated_Access: Valid Token Logic
 func TestAuth_Authenticated_Access(t *testing.T) {
-	handler, client := setupAuthIntegration(t, false)
+	handler, client := setupAuthIntegration(t)
 	t.Cleanup(func() { client.Close() })
 	// Ensure we don't crash on cleanup by closing client last (LIFO)
 	// You may need to copy 'cleanupFirestore' from integration_test.go or remove this line if it causes issues
@@ -173,9 +172,8 @@ func TestAuth_Authenticated_Access(t *testing.T) {
 	})
 }
 
-// TestAuth_Guest_Mode: Public Read = TRUE
 func TestAuth_Guest_Mode(t *testing.T) {
-	handler, client := setupAuthIntegration(t, true)
+	handler, client := setupAuthIntegration(t)
 	t.Cleanup(func() { client.Close() })
 
 	t.Run("Allow_Guest_Read", func(t *testing.T) {

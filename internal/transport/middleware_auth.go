@@ -13,7 +13,7 @@ import (
 //  2. No Token/Invalid Token ->
 //     a) If publicRead=true AND Method=GET -> Proceed as Guest.
 //     b) Otherwise -> 401 Unauthorized.
-func WithAuthProtection(next http.Handler, authClient *auth.Client, publicRead bool) http.Handler {
+func WithAuthProtection(next http.Handler, authClient *auth.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		authHeader := r.Header.Get("Authorization")
@@ -38,7 +38,7 @@ func WithAuthProtection(next http.Handler, authClient *auth.Client, publicRead b
 		}
 
 		// 2. Guest Access Logic (Fallback)
-		if publicRead && r.Method == http.MethodGet {
+		if r.Method == http.MethodGet {
 			w.Header().Set("X-Access-Type", "Public-Preview")
 			next.ServeHTTP(w, r)
 			return

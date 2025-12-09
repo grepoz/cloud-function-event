@@ -70,7 +70,6 @@ func init() {
 
 	// 4. Configuration
 	corsOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
-	publicReadAccess := os.Getenv("FIRESTORE_PUBLIC_READ_ACCESS") == "true"
 
 	// 5. Register Function
 	functions.HTTP("EventFunction", func(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +85,7 @@ func init() {
 		handler := transport.WithCompression(router)
 
 		// 2. Wrap with Auth
-		handler = transport.WithAuthProtection(handler, authClient, publicReadAccess)
+		handler = transport.WithAuthProtection(handler, authClient)
 
 		// 3. Wrap with Security Headers (NEW)
 		handler = transport.WithSecurityHeaders(handler)
