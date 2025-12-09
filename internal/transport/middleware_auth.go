@@ -11,7 +11,7 @@ import (
 // WithAuthProtection verifies the Firebase ID Token.
 //  1. Valid Token -> Context populated with AuthToken, Request proceeds.
 //  2. No Token/Invalid Token ->
-//     a) If publicRead=true AND Method=GET -> Proceed as Guest.
+//     a) If publicRead=true AND Method=GET AND Path starts with /events -> Proceed as Guest.
 //     b) Otherwise -> 401 Unauthorized.
 func WithAuthProtection(next http.Handler, authClient *auth.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -23,7 +23,6 @@ func WithAuthProtection(next http.Handler, authClient *auth.Client) http.Handler
 		// 1. Verify Token if present
 		if strings.HasPrefix(authHeader, "Bearer ") {
 			idToken := strings.TrimPrefix(authHeader, "Bearer ")
-			// This verifies the signature, expiration, and project ID remotely/locally
 			token, err = authClient.VerifyIDToken(r.Context(), idToken)
 		}
 
@@ -31,14 +30,15 @@ func WithAuthProtection(next http.Handler, authClient *auth.Client) http.Handler
 		isAuthenticated := token != nil && err == nil
 
 		if isAuthenticated {
-			// (Optional) Inject user info into context for downstream handlers
+			// Inject user info into context for downstream handlers
 			ctx := context.WithValue(r.Context(), "user", token)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 
-		// 2. Guest Access Logic (Fallback)
-		if r.Method == http.MethodGet {
+		// 2. Guest Access Logic (Restricted to /events only)
+		// We add a check: strings.HasPrefix(r.URL.Path, "/events")
+		if r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/events") {
 			w.Header().Set("X-Access-Type", "Public-Preview")
 			next.ServeHTTP(w, r)
 			return

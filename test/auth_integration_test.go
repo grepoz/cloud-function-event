@@ -200,3 +200,29 @@ func TestAuth_Guest_Mode(t *testing.T) {
 		}
 	})
 }
+
+func TestAuth_Guest_Mode_Restricted(t *testing.T) {
+	// Setup with publicRead = true
+	handler, client := setupAuthIntegration(t)
+	defer client.Close() // Ensure you use your robust cleanup logic here
+
+	// 1. Events should be ALLOWED
+	t.Run("Allow_Guest_Events", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/events/", nil)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected 200 OK for guest events, got %d", w.Code)
+		}
+	})
+
+	// 2. Tracking should be BLOCKED (even if publicRead is true)
+	t.Run("Block_Guest_Tracking", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/tracking/", nil)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("Expected 401 Unauthorized for guest tracking, got %d", w.Code)
+		}
+	})
+}
