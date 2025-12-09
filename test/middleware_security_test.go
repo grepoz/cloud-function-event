@@ -1,6 +1,7 @@
-package transport
+package test
 
 import (
+	"cloud-function-event/internal/transport"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -41,7 +42,7 @@ func TestWithSecurityHeaders(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Initialize middleware with the test case's config
-			secureHandler := WithSecurityHeaders(dummyHandler, tt.isProd)
+			secureHandler := transport.WithSecurityHeaders(dummyHandler, tt.isProd)
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			w := httptest.NewRecorder()
