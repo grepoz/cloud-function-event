@@ -3,23 +3,24 @@ package auth
 import (
 	"encoding/base64"
 	"encoding/json"
+	"time"
 )
 
 // GenerateEmulatorToken creates an unsigned JWT accepted by the Firebase Auth Emulator.
 func GenerateEmulatorToken(projectID, uid string) string {
-	if projectID == "" {
-		projectID = "local-project-id"
-	}
-
 	header := `{"alg":"none","typ":"JWT"}`
+
+	now := time.Now().Unix()
+
 	payload := map[string]interface{}{
 		"iss":       "https://securetoken.google.com/" + projectID,
 		"aud":       projectID,
-		"auth_time": 1,
+		"auth_time": now,
 		"user_id":   uid,
 		"sub":       uid,
-		"iat":       1,
-		"exp":       9999999999, // Never expire
+		"iat":       now,
+		"exp":       now + 3600, // Expires in 1 hour
+		"email":     "admin@localhost.com",
 	}
 
 	pBytes, _ := json.Marshal(payload)

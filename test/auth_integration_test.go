@@ -108,7 +108,12 @@ func setupAuthIntegration(t *testing.T) (http.Handler, *firestore.Client) {
 
 func TestAuth_Strict_Blocking(t *testing.T) {
 	handler, client := setupAuthIntegration(t)
-	t.Cleanup(func() { client.Close() })
+	t.Cleanup(func() {
+		err := client.Close()
+		if err != nil {
+			return
+		}
+	})
 
 	t.Run("Allow_Unauthenticated_Read", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/events/", nil)
@@ -135,7 +140,12 @@ func TestAuth_Strict_Blocking(t *testing.T) {
 // TestAuth_Authenticated_Access: Valid Token Logic
 func TestAuth_Authenticated_Access(t *testing.T) {
 	handler, client := setupAuthIntegration(t)
-	t.Cleanup(func() { client.Close() })
+	t.Cleanup(func() {
+		err := client.Close()
+		if err != nil {
+			return
+		}
+	})
 	// Ensure we don't crash on cleanup by closing client last (LIFO)
 	// You may need to copy 'cleanupFirestore' from integration_test.go or remove this line if it causes issues
 	// t.Cleanup(func() { cleanupFirestore(t, client) })
@@ -174,7 +184,12 @@ func TestAuth_Authenticated_Access(t *testing.T) {
 
 func TestAuth_Guest_Mode(t *testing.T) {
 	handler, client := setupAuthIntegration(t)
-	t.Cleanup(func() { client.Close() })
+	t.Cleanup(func() {
+		err := client.Close()
+		if err != nil {
+			return
+		}
+	})
 
 	t.Run("Allow_Guest_Read", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/events/", nil)
@@ -204,7 +219,12 @@ func TestAuth_Guest_Mode(t *testing.T) {
 func TestAuth_Guest_Mode_Restricted(t *testing.T) {
 	// Setup with publicRead = true
 	handler, client := setupAuthIntegration(t)
-	defer client.Close() // Ensure you use your robust cleanup logic here
+	defer func(client *firestore.Client) {
+		err := client.Close()
+		if err != nil {
+
+		}
+	}(client) // Ensure you use your robust cleanup logic here
 
 	// 1. Events should be ALLOWED
 	t.Run("Allow_Guest_Events", func(t *testing.T) {

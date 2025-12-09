@@ -8,6 +8,7 @@ import (
 	"cloud-function-event/internal/transport"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -326,7 +327,10 @@ func withFirestore(t *testing.T, testFunc func(t *testing.T, router http.Handler
 
 	t.Cleanup(func() {
 		cleanupFirestore(t, client)
-		client.Close()
+		err := client.Close()
+		if err != nil {
+			return
+		}
 	})
 
 	testFunc(t, router, client)
@@ -347,7 +351,7 @@ func cleanupFirestore(t *testing.T, client *firestore.Client) {
 
 		for {
 			doc, err := iter.Next()
-			if err == iterator.Done {
+			if errors.Is(err, iterator.Done) {
 				break
 			}
 			if err != nil {

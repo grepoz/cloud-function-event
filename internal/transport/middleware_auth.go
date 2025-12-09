@@ -47,6 +47,9 @@ func WithAuthProtection(next http.Handler, authClient *auth.Client) http.Handler
 		// 3. Deny Access
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"error": "Unauthorized: Valid Bearer token required"}`))
+		_, err = w.Write([]byte(`{"error": "Unauthorized: Valid Bearer token required"}`))
+		if err != nil {
+			return
+		}
 	})
 }

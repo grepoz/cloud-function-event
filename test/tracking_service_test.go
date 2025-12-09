@@ -72,7 +72,7 @@ func TestTrackEvent_Success(t *testing.T) {
 	mockRepo := &MockTrackingRepo{
 		SaveFunc: func(ctx context.Context, tr *domain.TrackingEvent) error {
 			if tr.Id == "" {
-				return errors.New("Id was not generated")
+				return errors.New("id was not generated")
 			}
 			if tr.CreatedAt.IsZero() {
 				return errors.New("CreatedAt was not set")

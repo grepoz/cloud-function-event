@@ -2,9 +2,10 @@ package repository
 
 import (
 	"cloud-function-event/internal/domain"
-	"cloud.google.com/go/firestore"
 	"context"
 	"errors"
+
+	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 )
 

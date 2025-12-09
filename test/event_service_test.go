@@ -13,7 +13,7 @@ func TestCreateEvent(t *testing.T) {
 	mockRepo := &MockRepository{
 		SaveFunc: func(ctx context.Context, event *domain.Event) error {
 			if event.Id == "" {
-				return errors.New("Id was not generated")
+				return errors.New("id was not generated")
 			}
 			return nil
 		},

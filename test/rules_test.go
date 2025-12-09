@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-var FIRESTORE_DATABASE_ID = os.Getenv("FIRESTORE_DATABASE_ID")
+var FirestoreDatabaseId = os.Getenv("FIRESTORE_DATABASE_ID")
 
 // TestFirestoreSecurityRules verifies that firestore.rules are enforced correctly.
 // It bypasses the Go Admin Client (which ignores rules) and hits the Emulator REST API directly.
@@ -68,7 +68,7 @@ func createEmulatorToken(uid string, projectID string) string {
 // tryWriteEvent attempts to write a document via the Firestore REST API
 func tryWriteEvent(host, project, token string) error {
 	// Construct Emulator REST URL
-	url := fmt.Sprintf("http://%s/v1/projects/%s/databases/%s/documents/events", host, project, FIRESTORE_DATABASE_ID)
+	url := fmt.Sprintf("http://%s/v1/projects/%s/databases/%s/documents/events", host, project, FirestoreDatabaseId)
 
 	// Minimal valid Firestore Document JSON
 	body := `{"fields": {
