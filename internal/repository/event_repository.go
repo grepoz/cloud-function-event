@@ -74,66 +74,63 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	reqSort := search.Sorting.SortKey
 
 	// 1. Identify active inequality filters
+	// Firestore requires that if you filter by inequality (range) on multiple fields,
+	// you must also order by those fields in the query to utilize the index efficiently.
 	var inequalityFields []string
+
+	// Prefix matches (>= and <=) count as inequalities
 	if f.EventName != "" {
 		inequalityFields = append(inequalityFields, "event_name")
 	}
 	if f.City != "" {
 		inequalityFields = append(inequalityFields, "city")
 	}
+	// Numeric and Date ranges
 	if f.MinPrice != nil || f.MaxPrice != nil {
 		inequalityFields = append(inequalityFields, "price")
 	}
-	if f.StartDate != nil {
+	if f.StartDate != nil || f.EndDate != nil {
 		inequalityFields = append(inequalityFields, "start_time")
 	}
-	if f.EndDate != nil {
-		inequalityFields = append(inequalityFields, "end_time")
+
+	// 2. Build Sort Order
+	var sortFields []string
+
+	// A. Add all inequality fields to sort first (Critical for Firestore logic)
+	for _, field := range inequalityFields {
+		sortFields = append(sortFields, field)
 	}
 
-	// 2. Determine the Primary Sort Key
-	primarySort := reqSort
-	if len(inequalityFields) > 0 {
-		isMatch := false
-		for _, field := range inequalityFields {
-			if field == reqSort {
-				isMatch = true
+	// B. Add User's requested sort (if not already added via inequality)
+	if reqSort != "" && validSorts[reqSort] {
+		isDuplicate := false
+		for _, existing := range sortFields {
+			if existing == reqSort {
+				isDuplicate = true
 				break
 			}
 		}
-		if !isMatch {
-			primarySort = inequalityFields[0]
+		if !isDuplicate {
+			sortFields = append(sortFields, reqSort)
 		}
 	}
 
-	// 3. Define Sort Order List
-	if !validSorts[primarySort] {
-		primarySort = "created_at"
+	// C. Fallback: If no sorts yet, default to created_at
+	if len(sortFields) == 0 {
+		sortFields = append(sortFields, "created_at")
 	}
 
-	// We build a slice of all fields we want to sort by.
-	// This ensures the Query order and the Cursor generation always match perfectly.
-	var sortFields []string
-	sortFields = append(sortFields, primarySort)
-
-	// If the forced primary sort is different from what the user requested,
-	// add the user's request as a secondary sort.
-	if primarySort != reqSort && reqSort != "" && validSorts[reqSort] {
-		sortFields = append(sortFields, reqSort)
-	}
-
-	// Always tie-break with ID to ensure stable pagination
+	// D. Always tie-break with ID for stable pagination
 	sortFields = append(sortFields, "id")
 
-	// 4. Build Query
+	// 3. Build Query (Apply Sorts)
+	coll := r.client.Collection(CollectionEvents)
+	var q firestore.Query
+
 	direction := firestore.Asc
 	if search.Sorting.SortDirection == "desc" {
 		direction = firestore.Desc
 	}
-
-	// FIX: Handle type transition from CollectionRef to Query
-	coll := r.client.Collection(CollectionEvents)
-	var q firestore.Query
 
 	for i, field := range sortFields {
 		// Calculate direction for this specific field
@@ -151,8 +148,9 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		}
 	}
 
-	// 5. Apply Filters
+	// 4. Apply Filters
 	lastUtf8Char := "\uf8ff"
+
 	if f.EventName != "" {
 		q = q.Where("event_name", ">=", f.EventName).Where("event_name", "<=", f.EventName+lastUtf8Char)
 	}
@@ -175,7 +173,7 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		q = q.Where("end_time", "<=", *f.EndDate)
 	}
 
-	// 6. Pagination Limit
+	// 5. Pagination Limit
 	limit := search.Sorting.PageSize
 	if limit <= 0 {
 		limit = 20
@@ -185,7 +183,7 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	}
 	q = q.Limit(limit)
 
-	// 7. Handle Page Token (Cursor)
+	// 6. Handle Page Token (Cursor)
 	if search.Sorting.PageToken != "" {
 		cursorVals, err := decodeCursor(search.Sorting.PageToken)
 		if err != nil {
@@ -213,7 +211,7 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		q = q.StartAfter(cursorVals...)
 	}
 
-	// Execute Query
+	// 7. Execute Query
 	iter := q.Documents(ctx)
 	defer iter.Stop()
 
@@ -235,7 +233,7 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		events = append(events, e)
 	}
 
-	// Generate Next Page Token
+	// 8. Generate Next Page Token
 	nextToken := ""
 	if len(events) == limit {
 		lastEvent := events[len(events)-1]
