@@ -67,37 +67,97 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 
 	validSorts := map[string]bool{
 		"created_at": true, "price": true, "start_time": true,
-		"event_name": true, "city": true,
+		"event_name": true, "city": true, "end_time": true,
 	}
 
-	// 1. Determine Sorting FIRST
-	sortKey := search.Sorting.SortKey
-	if !validSorts[sortKey] {
-		sortKey = "created_at" // Fallback to safe default
+	f := search.Filters
+	reqSort := search.Sorting.SortKey
+
+	// 1. Identify active inequality filters
+	var inequalityFields []string
+	if f.EventName != "" {
+		inequalityFields = append(inequalityFields, "event_name")
+	}
+	if f.City != "" {
+		inequalityFields = append(inequalityFields, "city")
+	}
+	if f.MinPrice != nil || f.MaxPrice != nil {
+		inequalityFields = append(inequalityFields, "price")
+	}
+	if f.StartDate != nil {
+		inequalityFields = append(inequalityFields, "start_time")
+	}
+	if f.EndDate != nil {
+		inequalityFields = append(inequalityFields, "end_time")
 	}
 
+	// 2. Determine the Primary Sort Key
+	primarySort := reqSort
+	if len(inequalityFields) > 0 {
+		isMatch := false
+		for _, field := range inequalityFields {
+			if field == reqSort {
+				isMatch = true
+				break
+			}
+		}
+		if !isMatch {
+			primarySort = inequalityFields[0]
+		}
+	}
+
+	// 3. Define Sort Order List
+	if !validSorts[primarySort] {
+		primarySort = "created_at"
+	}
+
+	// We build a slice of all fields we want to sort by.
+	// This ensures the Query order and the Cursor generation always match perfectly.
+	var sortFields []string
+	sortFields = append(sortFields, primarySort)
+
+	// If the forced primary sort is different from what the user requested,
+	// add the user's request as a secondary sort.
+	if primarySort != reqSort && reqSort != "" && validSorts[reqSort] {
+		sortFields = append(sortFields, reqSort)
+	}
+
+	// Always tie-break with ID to ensure stable pagination
+	sortFields = append(sortFields, "id")
+
+	// 4. Build Query
 	direction := firestore.Asc
 	if search.Sorting.SortDirection == "desc" {
 		direction = firestore.Desc
 	}
 
-	// 2. Initialize 'q' using the OrderBy clause
-	// This converts the CollectionRef to a Query immediately
-	q := r.client.Collection(CollectionEvents).OrderBy(sortKey, direction)
+	// FIX: Handle type transition from CollectionRef to Query
+	coll := r.client.Collection(CollectionEvents)
+	var q firestore.Query
 
-	f := search.Filters
+	for i, field := range sortFields {
+		// Calculate direction for this specific field
+		dir := direction
+		if field == "id" {
+			dir = firestore.Asc // ID is always Ascending for stability
+		}
 
-	// 3. Apply Filters
+		// First iteration applies to CollectionRef and returns a Query
+		// Subsequent iterations apply to Query and return a Query
+		if i == 0 {
+			q = coll.OrderBy(field, dir)
+		} else {
+			q = q.OrderBy(field, dir)
+		}
+	}
 
+	// 5. Apply Filters
 	lastUtf8Char := "\uf8ff"
-
 	if f.EventName != "" {
-		q = q.Where("event_name", ">=", f.EventName)
-		q = q.Where("event_name", "<=", f.EventName+lastUtf8Char)
+		q = q.Where("event_name", ">=", f.EventName).Where("event_name", "<=", f.EventName+lastUtf8Char)
 	}
 	if f.City != "" {
-		q = q.Where("city", ">=", f.City)
-		q = q.Where("city", "<=", f.City+lastUtf8Char)
+		q = q.Where("city", ">=", f.City).Where("city", "<=", f.City+lastUtf8Char)
 	}
 	if f.Type != "" {
 		q = q.Where("type", "==", f.Type)
@@ -115,11 +175,7 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		q = q.Where("end_time", "<=", *f.EndDate)
 	}
 
-	// 4. Apply Secondary Sort (Id)
-	// We append this to the existing sort order
-	q = q.OrderBy("id", firestore.Asc)
-
-	// 5. Pagination Limit
+	// 6. Pagination Limit
 	limit := search.Sorting.PageSize
 	if limit <= 0 {
 		limit = 20
@@ -129,21 +185,26 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	}
 	q = q.Limit(limit)
 
-	// Handle Page Token (Cursor)
+	// 7. Handle Page Token (Cursor)
 	if search.Sorting.PageToken != "" {
 		cursorVals, err := decodeCursor(search.Sorting.PageToken)
 		if err != nil {
 			return nil, "", fmt.Errorf("invalid page token")
 		}
 
-		if len(cursorVals) > 0 {
-			switch sortKey {
+		// Safety Check: Cursor length must match the number of OrderBy fields
+		if len(cursorVals) != len(sortFields) {
+			return nil, "", fmt.Errorf("cursor mismatch: sorting criteria changed")
+		}
+
+		// Correctly parse time strings based on the field type in that position
+		for i, field := range sortFields {
+			switch field {
 			case "created_at", "start_time", "end_time":
-				// Check if it's a string and parse it
-				if strVal, ok := cursorVals[0].(string); ok {
+				if strVal, ok := cursorVals[i].(string); ok {
 					t, err := time.Parse(time.RFC3339, strVal)
 					if err == nil {
-						cursorVals[0] = t
+						cursorVals[i] = t
 					}
 				}
 			}
@@ -178,9 +239,18 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	nextToken := ""
 	if len(events) == limit {
 		lastEvent := events[len(events)-1]
-		// We need to encode values for all OrderBy fields: [sortKey, id]
-		val := getSortValue(&lastEvent, sortKey)
-		nextToken = encodeCursor([]interface{}{val, lastEvent.Id})
+
+		var cursorValues []interface{}
+		// Generate cursor values exactly matching the sortFields list
+		for _, field := range sortFields {
+			if field == "id" {
+				cursorValues = append(cursorValues, lastEvent.Id)
+			} else {
+				cursorValues = append(cursorValues, getSortValue(&lastEvent, field))
+			}
+		}
+
+		nextToken = encodeCursor(cursorValues)
 	}
 
 	return events, nextToken, nil
