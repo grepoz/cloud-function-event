@@ -8,11 +8,12 @@ import (
 	"firebase.google.com/go/v4/auth"
 )
 
-// WithAuthProtection verifies the Firebase ID Token.
-//  1. Valid Token -> Context populated with AuthToken, Request proceeds.
-//  2. No Token/Invalid Token ->
-//     a) If publicRead=true AND Method=GET AND Path starts with /events -> Proceed as Guest.
-//     b) Otherwise -> 401 Unauthorized.
+// 1. Define a custom unexported type to prevent collisions
+type contextKey string
+
+// 2. Define the key constant. We export it so other packages in your app can read it.
+const UserContextKey contextKey = "user"
+
 func WithAuthProtection(next http.Handler, authClient *auth.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -31,7 +32,7 @@ func WithAuthProtection(next http.Handler, authClient *auth.Client) http.Handler
 
 		if isAuthenticated {
 			// Inject user info into context for downstream handlers
-			ctx := context.WithValue(r.Context(), "user", token)
+			ctx := context.WithValue(r.Context(), UserContextKey, token)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}

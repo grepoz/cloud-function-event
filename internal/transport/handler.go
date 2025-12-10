@@ -4,12 +4,15 @@ import (
 	"cloud-function-event/internal/domain"
 	"cloud-function-event/internal/service"
 	"encoding/json"
-	"log" // <--- Added log import
+	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/andybalholm/brotli"
 )
+
+var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 // NewRouter initializes the main HTTP handler using Go 1.22+ ServeMux
 func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingService) http.Handler {
@@ -68,6 +71,7 @@ func WithCORS(next http.Handler, origin string) http.Handler {
 }
 
 // respondError is a shared helper for JSON error responses
+
 func respondError(w http.ResponseWriter, err error) {
 	// 1. Handle Validation Errors (400 Bad Request)
 	if _, ok := err.(*domain.ValidationError); ok {
@@ -77,7 +81,6 @@ func respondError(w http.ResponseWriter, err error) {
 	}
 
 	// 2. Handle Not Found (404 Not Found)
-	// Ideally, define a custom ErrNotFound type in domain/errors.go for cleaner checks
 	if err.Error() == "event not found" {
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
@@ -85,8 +88,11 @@ func respondError(w http.ResponseWriter, err error) {
 	}
 
 	// 3. Handle Internal Errors (500 Internal Server Error)
-	// Log the REAL error for the developer
-	log.Printf("SERVER ERROR: %v", err)
+	// FIX: Use structured logging
+	logger.Error("SERVER ERROR",
+		"error", err,
+		"component", "api_handler", // Easier filtering in GCP
+	)
 
 	// Send a GENERIC error to the client to prevent info leakage
 	w.WriteHeader(http.StatusInternalServerError)

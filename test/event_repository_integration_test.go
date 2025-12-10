@@ -100,9 +100,7 @@ func TestEventRepository_List_MultipleFilters_RoughMatch(t *testing.T) {
 			t.Errorf("Too few results! Got %d, expected at least %d matching events.", count, expectedMatches)
 		}
 
-		// Tolerance for Emulator "False Positives" (e.g. +10 allowed)
-		tolerance := 10
-		maxAllowed := expectedMatches + tolerance
+		maxAllowed := expectedMatches
 
 		if count > maxAllowed {
 			t.Errorf("Too many results! Got %d. The secondary filter seems ineffective (Max allowed: %d).", count, maxAllowed)
