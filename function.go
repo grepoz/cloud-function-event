@@ -22,8 +22,8 @@ import (
 
 // Global variables to hold the initialized state
 var (
-	eventFunctionHandler http.Handler
-	initOnce             sync.Once
+	functionHandler http.Handler
+	initOnce        sync.Once
 )
 
 // @host 127.0.0.1:5000
@@ -35,14 +35,14 @@ var (
 func init() {
 	// Register the entry point, but DO NOT initialize clients here.
 	// We defer that to the first request.
-	functions.HTTP("EventFunction", func(w http.ResponseWriter, r *http.Request) {
+	functions.HTTP("BibentlyFunctions", func(w http.ResponseWriter, r *http.Request) {
 		// Lazy initialization on first request
 		initOnce.Do(func() {
 			setupApplication()
 		})
 
 		// Delegate to the initialized handler
-		eventFunctionHandler.ServeHTTP(w, r)
+		functionHandler.ServeHTTP(w, r)
 	})
 }
 
@@ -101,7 +101,7 @@ func setupApplication() {
 
 	// We create a wrapper to handle Swagger routing vs App routing
 	if isProduction == false {
-		eventFunctionHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		functionHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasPrefix(r.URL.Path, "/swagger/") {
 				httpSwagger.Handler(httpSwagger.DeepLinking(false))(w, r)
 				return

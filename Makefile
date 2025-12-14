@@ -38,10 +38,10 @@ start-emulators: rules
 
 # Helper to run the function locally with emulator
 run: tidy
-	FIREBASE_AUTH_EMULATOR_HOST=$(FIREBASE_AUTH_EMULATOR_HOST) FIRESTORE_EMULATOR_HOST=$(FIRESTORE_EMULATOR_HOST) FIRESTORE_DATABASE_ID=$(FIRESTORE_DATABASE_ID) GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=EventFunction LOCAL_ONLY=true go run cmd/main.go
+	FIREBASE_AUTH_EMULATOR_HOST=$(FIREBASE_AUTH_EMULATOR_HOST) FIRESTORE_EMULATOR_HOST=$(FIRESTORE_EMULATOR_HOST) FIRESTORE_DATABASE_ID=$(FIRESTORE_DATABASE_ID) GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=BibentlyFunctions LOCAL_ONLY=true go run cmd/main.go
 
 run-real: tidy
-	GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=EventFunction LOCAL_ONLY=true FIRESTORE_DATABASE_ID="bibently-store" go run cmd/main.go
+	GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=BibentlyFunctions LOCAL_ONLY=true FIRESTORE_DATABASE_ID="bibently-store" go run cmd/main.go
 
 swagger:
 	swag init -g function.go --output docs
@@ -60,6 +60,6 @@ deploy: tidy rules
 	--allow-unauthenticated \
 	--set-env-vars APP_ENV=production,CORS_ALLOWED_ORIGIN=* \
 #	--set-env-vars=$(shell grep -v '^#' .env | xargs | tr ' ' ',')
-
+	--service-account=cloud-functions-sa@<your-project>.iam.gserviceaccount.com
 	# Deploy the generated rules to Firestore
 	firebase deploy --only firestore:rules

@@ -34,13 +34,6 @@ Run the unit tests (ensure you run tidy first):
 To deploy to Google Cloud:
 
 ```
-gcloud functions deploy event-function \
---gen2 \
---runtime=go121 \
---region=us-central1 \
---source=. \
---entry-point=EventFunction \
---trigger-http \
---allow-unauthenticated
+
 ```
 
