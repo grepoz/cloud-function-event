@@ -7,16 +7,24 @@ import (
 
 // MockRepository manually implements Repository for testing
 type MockRepository struct {
-	SaveFunc    func(ctx context.Context, event *domain.Event) error
-	UpdateFunc  func(ctx context.Context, id string, updates map[string]interface{}) error
-	GetByIDFunc func(ctx context.Context, id string) (*domain.Event, error)
-	DeleteFunc  func(ctx context.Context, id string) error
-	ListFunc    func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error)
+	SaveFunc      func(ctx context.Context, event *domain.Event) error
+	BatchSaveFunc func(ctx context.Context, events []*domain.Event) error
+	UpdateFunc    func(ctx context.Context, id string, updates map[string]interface{}) error
+	GetByIDFunc   func(ctx context.Context, id string) (*domain.Event, error)
+	DeleteFunc    func(ctx context.Context, id string) error
+	ListFunc      func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error)
 }
 
 func (m *MockRepository) Save(ctx context.Context, event *domain.Event) error {
 	if m.SaveFunc != nil {
 		return m.SaveFunc(ctx, event)
+	}
+	return nil
+}
+
+func (m *MockRepository) BatchSave(ctx context.Context, events []*domain.Event) error {
+	if m.BatchSaveFunc != nil {
+		return m.BatchSaveFunc(ctx, events)
 	}
 	return nil
 }

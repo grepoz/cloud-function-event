@@ -52,6 +52,37 @@ func TestCreateEvent_Validation(t *testing.T) {
 	}
 }
 
+func TestBatchCreateEvents(t *testing.T) {
+	mockRepo := &MockRepository{
+		BatchSaveFunc: func(ctx context.Context, events []*domain.Event) error {
+			if len(events) != 2 {
+				t.Errorf("Expected 2 events in batch, got %d", len(events))
+			}
+			for _, e := range events {
+				if e.Id == "" {
+					return errors.New("ID not generated")
+				}
+				if e.CreatedAt.IsZero() {
+					return errors.New("CreatedAt not set")
+				}
+			}
+			return nil
+		},
+	}
+
+	svc := service.NewEventService(mockRepo)
+
+	events := []*domain.Event{
+		{EventName: "Event 1", City: "Warsaw"},
+		{EventName: "Event 2", City: "Krakow"},
+	}
+
+	err := svc.BatchCreateEvents(context.Background(), events)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
 func TestUpdateEvent(t *testing.T) {
 	mockRepo := &MockRepository{
 		UpdateFunc: func(ctx context.Context, id string, updates map[string]interface{}) error {

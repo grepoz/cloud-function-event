@@ -320,6 +320,57 @@ func TestIntegration_ComplexFilter(t *testing.T) {
 	})
 }
 
+func TestIntegration_BatchCreateEvents(t *testing.T) {
+	withFirestore(t, func(t *testing.T, router http.Handler, client *firestore.Client) {
+
+		// 1. Prepare Batch JSON
+		bodyJSON := `{
+			"events": [
+				{
+					"event_name": "Batch Event 1",
+					"city": "Gdansk",
+					"type": "concert",
+					"start_time": "2025-05-01T20:00:00Z"
+				},
+				{
+					"event_name": "Batch Event 2",
+					"city": "Gdansk",
+					"type": "conference",
+					"start_time": "2025-06-01T09:00:00Z"
+				}
+			]
+		}`
+
+		// 2. Execute Request
+		req := httptest.NewRequest(http.MethodPost, "/events/batch", bytes.NewReader([]byte(bodyJSON)))
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// 3. Verify Response
+		if w.Code != http.StatusCreated {
+			t.Fatalf("Expected 201 Created, got %d. Body: %s", w.Code, w.Body.String())
+		}
+
+		var resp domain.APIResponse
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+		if resp.Data != "Successfully created 2 events" {
+			t.Errorf("Unexpected response message: %v", resp.Data)
+		}
+
+		// 4. Verify Persistence (Check count)
+		iter := client.Collection("events").Documents(context.Background())
+		docs, err := iter.GetAll()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(docs) != 2 {
+			t.Errorf("Expected 2 documents in Firestore, found %d", len(docs))
+		}
+	})
+}
+
 func withFirestore(t *testing.T, testFunc func(t *testing.T, router http.Handler, client *firestore.Client)) {
 	t.Helper()
 

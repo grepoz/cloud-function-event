@@ -15,6 +15,7 @@ type EventService interface {
 	GetEvent(ctx context.Context, id string) (*domain.Event, error)
 	DeleteEvent(ctx context.Context, id string) error
 	ListEvents(ctx context.Context, request domain.SearchRequest) ([]domain.Event, string, error)
+	BatchCreateEvents(ctx context.Context, events []*domain.Event) error
 }
 
 type eventService struct {
@@ -71,4 +72,24 @@ func (s *eventService) ListEvents(ctx context.Context, req domain.SearchRequest)
 		req.Sorting.PageSize = 100
 	}
 	return s.repo.List(ctx, req)
+}
+
+func (s *eventService) BatchCreateEvents(ctx context.Context, events []*domain.Event) error {
+	if len(events) == 0 {
+		return domain.ErrValidation("no events to create")
+	}
+
+	now := time.Now().UTC()
+	for _, event := range events {
+		if event.Id == "" {
+			event.Id = uuid.New().String()
+		}
+		if event.CreatedAt.IsZero() {
+			event.CreatedAt = now
+		}
+		if event.EventName == "" {
+			return domain.ErrValidation("event name is required for all items")
+		}
+	}
+	return s.repo.BatchSave(ctx, events)
 }

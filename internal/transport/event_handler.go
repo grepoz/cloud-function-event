@@ -4,6 +4,7 @@ import (
 	"cloud-function-event/internal/domain"
 	"cloud-function-event/internal/service"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -27,6 +28,7 @@ func (h *EventHandler) routes() {
 	// Collection routes (matched at root of stripped prefix)
 	h.mux.HandleFunc("GET /{$}", h.handleList)
 	h.mux.HandleFunc("POST /{$}", h.handleCreate)
+	h.mux.HandleFunc("POST /batch", h.handleBatchCreate)
 
 	// Item routes (matched with path value)
 	h.mux.HandleFunc("GET /{id}", h.handleGet)
@@ -72,6 +74,48 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: event.Id})
+}
+
+// handleBatchCreate creates multiple events
+// @Summary Batch Create Events
+// @Description Create multiple events in one go
+// @Tags events
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param batch body domain.BatchEventRequest true "Batch Data"
+// @Success 201 {object} domain.APIResponse{data=string}
+// @Failure 400 {object} domain.APIResponse{error=string}
+// @Router /events/batch [post]
+func (h *EventHandler) handleBatchCreate(w http.ResponseWriter, r *http.Request) {
+	var req domain.BatchEventRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, domain.ErrValidation("Invalid JSON body"))
+		return
+	}
+
+	if err := domain.Validate.Struct(req); err != nil {
+		respondError(w, domain.ErrValidation(err.Error()))
+		return
+	}
+
+	var events []*domain.Event
+	for i, dto := range req.Events {
+		model, err := domain.EventDTOToModel(&dto)
+		if err != nil {
+			respondError(w, domain.ErrValidation(fmt.Sprintf("Item %d: %v", i, err)))
+			return
+		}
+		events = append(events, model)
+	}
+
+	if err := h.service.BatchCreateEvents(r.Context(), events); err != nil {
+		respondError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: fmt.Sprintf("Successfully created %d events", len(events))})
 }
 
 // handleUpdate updates an existing event

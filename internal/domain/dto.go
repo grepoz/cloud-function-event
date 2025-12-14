@@ -68,6 +68,10 @@ type EventListDTO struct {
 	Type      string `validate:"omitempty,oneof=concert festival theater standup conference meetup other"`
 }
 
+type BatchEventRequest struct {
+	Events []EventDTO `json:"events" validate:"required,min=1,dive"`
+}
+
 func EventDTOToModel(dto *EventDTO) (*Event, error) {
 	startTime, err := time.Parse(time.RFC3339, dto.StartTime)
 	if err != nil {

@@ -23,6 +23,7 @@ type EventRepository interface {
 	GetByID(ctx context.Context, id string) (*domain.Event, error)
 	Update(ctx context.Context, id string, updates map[string]interface{}) error
 	Save(ctx context.Context, event *domain.Event) error
+	BatchSave(ctx context.Context, events []*domain.Event) error
 }
 
 type eventRepo struct {
@@ -252,6 +253,30 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	}
 
 	return events, nextToken, nil
+}
+
+func (r *eventRepo) BatchSave(ctx context.Context, events []*domain.Event) error {
+	// Firestore limit is 500 operations per batch
+	const batchSize = 500
+	total := len(events)
+
+	for i := 0; i < total; i += batchSize {
+		end := i + batchSize
+		if end > total {
+			end = total
+		}
+
+		batch := r.client.Batch()
+		for _, event := range events[i:end] {
+			docRef := r.client.Collection(CollectionEvents).Doc(event.Id)
+			batch.Set(docRef, event)
+		}
+
+		if _, err := batch.Commit(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func getSortValue(e *domain.Event, key string) interface{} {

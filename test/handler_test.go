@@ -14,11 +14,12 @@ import (
 
 // MockService implements EventService for handler testing
 type MockEventService struct {
-	CreateFunc func(ctx context.Context, event *domain.Event) error
-	UpdateFunc func(ctx context.Context, id string, updates map[string]interface{}) error
-	GetFunc    func(ctx context.Context, id string) (*domain.Event, error)
-	DeleteFunc func(ctx context.Context, id string) error
-	ListFunc   func(ctx context.Context, req domain.SearchRequest) ([]domain.Event, string, error)
+	CreateFunc      func(ctx context.Context, event *domain.Event) error
+	BatchCreateFunc func(ctx context.Context, events []*domain.Event) error
+	UpdateFunc      func(ctx context.Context, id string, updates map[string]interface{}) error
+	GetFunc         func(ctx context.Context, id string) (*domain.Event, error)
+	DeleteFunc      func(ctx context.Context, id string) error
+	ListFunc        func(ctx context.Context, req domain.SearchRequest) ([]domain.Event, string, error)
 }
 
 func (m *MockEventService) CreateEvent(ctx context.Context, event *domain.Event) error {
@@ -50,6 +51,13 @@ func (m *MockEventService) ListEvents(ctx context.Context, req domain.SearchRequ
 		return m.ListFunc(ctx, req)
 	}
 	return nil, "", nil
+}
+
+func (m *MockEventService) BatchCreateEvents(ctx context.Context, events []*domain.Event) error {
+	if m.BatchCreateFunc != nil {
+		return m.BatchCreateFunc(ctx, events)
+	}
+	return nil
 }
 
 type MockTrackingService struct {
