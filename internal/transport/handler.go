@@ -3,16 +3,29 @@ package transport
 import (
 	"cloud-function-event/internal/domain"
 	"cloud-function-event/internal/service"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/andybalholm/brotli"
 )
 
-var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+var logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+		if a.Key == slog.LevelKey {
+			a.Key = "severity"
+			// Map standard levels to GCP levels if needed (default usually works)
+		}
+		if a.Key == slog.MessageKey {
+			a.Key = "message"
+		}
+		return a
+	},
+}))
 
 // NewRouter initializes the main HTTP handler using Go 1.22+ ServeMux
 func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingService) http.Handler {
@@ -47,6 +60,45 @@ func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingServic
 	})
 
 	return mux
+}
+
+func WithTimeout(next http.Handler, duration time.Duration) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Create a context that cancels after 'duration'
+		ctx, cancel := context.WithTimeout(r.Context(), duration)
+		defer cancel()
+
+		// Pass the new context to the next handler
+		r = r.WithContext(ctx)
+
+		// Create a channel to signal when the handler is done
+		done := make(chan struct{})
+
+		// Use a panic-safe goroutine to run the handler
+		go func() {
+			defer func() {
+				if rec := recover(); rec != nil {
+					logger.Error("PANIC in handler", "error", rec)
+				}
+				close(done)
+			}()
+
+			// We need to wrap the writer to ignore writes if timeout occurs,
+			// but http.TimeoutHandler is the standard stdlib way to do this.
+			// However, since we want to compose with other middleware,
+			// let's use the standard http.TimeoutHandler logic:
+			next.ServeHTTP(w, r)
+		}()
+
+		select {
+		case <-done:
+			// Handler finished normally
+		case <-ctx.Done():
+			// Timeout happened
+			w.WriteHeader(http.StatusGatewayTimeout)
+			_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: "Request timed out"})
+		}
+	})
 }
 
 func WithCORS(next http.Handler, origin string) http.Handler {

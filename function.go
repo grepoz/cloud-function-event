@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
@@ -40,8 +41,6 @@ func init() {
 		initOnce.Do(func() {
 			setupApplication()
 		})
-
-		// Delegate to the initialized handler
 		functionHandler.ServeHTTP(w, r)
 	})
 }
@@ -95,11 +94,12 @@ func setupApplication() {
 	handler = transport.WithSecurityHeaders(handler, isProduction)
 	handler = transport.WithCORS(handler, corsOrigin)
 
-	// Assign to the global handler variable
-	// Handle Swagger specific path check inside the main handler wrapper if needed,
-	// or wrap it here. For simplicity based on your original code:
+	// This ensures the response writes a 503 if logic takes > 20s.
+	// 20s is chosen to be well within default Cloud Function timeout (60s).
+	timeoutDuration := 15 * time.Second
+	timeoutMsg := `{"error": "Gateway Timeout: Upstream processing duration exceeded"}`
+	handler = http.TimeoutHandler(handler, timeoutDuration, timeoutMsg)
 
-	// We create a wrapper to handle Swagger routing vs App routing
 	if isProduction == false {
 		functionHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasPrefix(r.URL.Path, "/swagger/") {
@@ -108,5 +108,7 @@ func setupApplication() {
 			}
 			handler.ServeHTTP(w, r)
 		})
+	} else {
+		functionHandler = handler
 	}
 }

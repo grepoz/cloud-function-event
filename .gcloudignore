@@ -1,3 +1,21 @@
+.git
+.gitignore
+.gcloudignore
+.env
+.idea/
+.vscode/
+
+# Build & Test artifacts
 test/
 cmd/
-/docs
+docs/
+Makefile
+README.md
+qodana.yaml
+
+# Firebase / Emulator specific (Not needed in GCF)
+firebase.json
+firestore.indexes.json
+firestore.rules
+firestore.rules.template
+*.http
