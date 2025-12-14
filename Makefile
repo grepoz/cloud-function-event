@@ -63,10 +63,10 @@ deploy: rules
 	--set-env-vars APP_ENV=production,CORS_ALLOWED_ORIGIN=*,FIRESTORE_DATABASE_ID=bibently-store,FIRESTORE_ADMIN_UID=$(FIRESTORE_ADMIN_UID) \
 	--service-account=$(FUNCTION_SERVICE_ACCOUNT)
 	# Deploy the generated rules to Firestore
-	firebase deploy --only firestore:rules
+	firebase deploy --only firestore
 
-deploy-firebase-rules:
-	firebase deploy --only firestore:rules
+deploy-firebase:
+	firebase deploy --only firestore
 
 # can set all env vars from .env file
 #	--set-env-vars=$(shell grep -v '^#' .env | xargs | tr ' ' ',')
