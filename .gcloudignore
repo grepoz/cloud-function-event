@@ -8,7 +8,6 @@
 # Build & Test artifacts
 test/
 cmd/
-docs/
 Makefile
 README.md
 qodana.yaml
