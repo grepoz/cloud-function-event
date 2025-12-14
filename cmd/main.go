@@ -10,9 +10,9 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 
 	// Blank-import the function package so the init() runs
-	_ "cloud-function-event"
+	_ "bibently/backend"
 
-	emulatorAuth "cloud-function-event/internal/auth"
+	emulatorAuth "bibently/backend/internal/auth"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"

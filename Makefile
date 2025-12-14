@@ -51,7 +51,7 @@ swagger:
 
 # Deploy to Google Cloud Functions (Gen 2)
 deploy: tidy rules
-	gcloud functions deploy event-function \
+	gcloud functions deploy bibently-functions \
 	--gen2 \
 	--runtime=go125 \
 	--region=europe-west1 \

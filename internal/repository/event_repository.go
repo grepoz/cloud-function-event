@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"cloud-function-event/internal/domain"
+	"bibently/backend/internal/domain"
 	"context"
 	"encoding/base64"
 	"encoding/json"

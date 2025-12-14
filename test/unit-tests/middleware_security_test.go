@@ -1,7 +1,7 @@
 package unit_tests
 
 import (
-	"cloud-function-event/internal/transport"
+	"bibently/backend/internal/transport"
 	"net/http"
 	"net/http/httptest"
 	"testing"

@@ -1,9 +1,9 @@
 package function
 
 import (
-	"cloud-function-event/internal/repository"
-	"cloud-function-event/internal/service"
-	"cloud-function-event/internal/transport"
+	"bibently/backend/internal/repository"
+	"bibently/backend/internal/service"
+	"bibently/backend/internal/transport"
 	"context"
 	"log"
 	"net/http"
@@ -16,7 +16,7 @@ import (
 	firebase "firebase.google.com/go/v4"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 
-	_ "cloud-function-event/docs"
+	_ "bibently/backend/docs"
 
 	httpSwagger "github.com/swaggo/http-swagger"
 )

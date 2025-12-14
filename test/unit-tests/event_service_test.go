@@ -1,9 +1,9 @@
 package unit_tests
 
 import (
-	"cloud-function-event/internal/domain"
-	"cloud-function-event/internal/service"
-	"cloud-function-event/test"
+	"bibently/backend/internal/domain"
+	"bibently/backend/internal/service"
+	"bibently/backend/test"
 	"context"
 	"errors"
 	"reflect"

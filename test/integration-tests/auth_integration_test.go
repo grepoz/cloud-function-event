@@ -1,10 +1,10 @@
 package integration_tests
 
 import (
+	"bibently/backend/internal/repository"
+	"bibently/backend/internal/service"
+	"bibently/backend/internal/transport"
 	"bytes"
-	"cloud-function-event/internal/repository"
-	"cloud-function-event/internal/service"
-	"cloud-function-event/internal/transport"
 	"context"
 	"encoding/base64"
 	"encoding/json"

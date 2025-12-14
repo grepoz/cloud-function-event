@@ -1,8 +1,8 @@
 package transport
 
 import (
-	"cloud-function-event/internal/domain"
-	"cloud-function-event/internal/service"
+	"bibently/backend/internal/domain"
+	"bibently/backend/internal/service"
 	"context"
 	"encoding/json"
 	"fmt"

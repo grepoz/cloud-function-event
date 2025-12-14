@@ -1,8 +1,8 @@
 package service
 
 import (
-	"cloud-function-event/internal/domain"
-	"cloud-function-event/internal/repository"
+	"bibently/backend/internal/domain"
+	"bibently/backend/internal/repository"
 	"context"
 	"time"
 

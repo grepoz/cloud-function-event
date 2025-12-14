@@ -1,4 +1,4 @@
-module cloud-function-event
+module bibently/backend
 
 go 1.25.0
 
