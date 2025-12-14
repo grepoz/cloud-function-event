@@ -60,6 +60,13 @@ deploy: tidy rules
 	--allow-unauthenticated \
 	--set-env-vars APP_ENV=production,CORS_ALLOWED_ORIGIN=* \
 #	--set-env-vars=$(shell grep -v '^#' .env | xargs | tr ' ' ',')
-	--service-account=cloud-functions-sa@<your-project>.iam.gserviceaccount.com
+	--service-account=$(FUNCTION_SERVICE_ACCOUNT)
 	# Deploy the generated rules to Firestore
 	firebase deploy --only firestore:rules
+
+
+# check the service account used by the function
+#gcloud functions describe $(FUNCTION_TARGET) \
+#    --region=europe-west1 \
+#    --gen2 \
+#    --format="value(serviceConfig.serviceAccountEmail)"
