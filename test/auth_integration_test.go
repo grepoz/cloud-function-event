@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -64,11 +65,9 @@ func ensureUserExists(ctx context.Context, client *auth.Client, uid string) erro
 func setupAuthIntegration(t *testing.T) (http.Handler, *firestore.Client) {
 	t.Helper()
 
-	// 1. Force Emulator Hosts & Admin UID
-	// t.Setenv automatically restores variables after the test finishes
-	t.Setenv("FIRESTORE_EMULATOR_HOST", "localhost:8080")
-	t.Setenv("FIREBASE_AUTH_EMULATOR_HOST", "localhost:9099")
-	t.Setenv("FIRESTORE_ADMIN_UID", TestAdminUID)
+	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {
+		t.Skip("Skipping auth integration test: Emulator not running")
+	}
 
 	ctx := context.Background()
 

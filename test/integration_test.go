@@ -22,12 +22,6 @@ import (
 
 func setupIntegration(t *testing.T) (http.Handler, *firestore.Client) {
 
-	err := os.Setenv("FIRESTORE_EMULATOR_HOST", "localhost:8080")
-	if err != nil {
-		t.Fatalf("Failed to set FIRESTORE_EMULATOR_HOST: %v", err)
-		return nil, nil
-	}
-
 	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {
 		t.Skip("Skipping integration test: FIRESTORE_EMULATOR_HOST not set")
 	}
