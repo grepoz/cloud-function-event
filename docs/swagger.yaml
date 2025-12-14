@@ -6,6 +6,17 @@ definitions:
       error:
         type: string
     type: object
+  domain.BatchEventRequest:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/domain.EventDTO'
+        maxItems: 5000
+        minItems: 1
+        type: array
+    required:
+    - events
+    type: object
   domain.Event:
     properties:
       city:
@@ -110,9 +121,6 @@ definitions:
 host: 127.0.0.1:5000
 info:
   contact: {}
-  description: API for managing events in Firestore (Google Cloud Function).
-  title: Cloud Function Event API
-  version: "1.0"
 paths:
   /events:
     get:
@@ -358,6 +366,44 @@ paths:
       security:
       - BearerAuth: []
       summary: Update Event
+      tags:
+      - events
+  /events/batch:
+    post:
+      consumes:
+      - application/json
+      description: Create multiple events in one go
+      parameters:
+      - description: Batch Data
+        in: body
+        name: batch
+        required: true
+        schema:
+          $ref: '#/definitions/domain.BatchEventRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.APIResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Batch Create Events
       tags:
       - events
   /tracking:

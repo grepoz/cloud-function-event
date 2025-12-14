@@ -1,10 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "API for managing events in Firestore (Google Cloud Function).",
-        "title": "Cloud Function Event API",
-        "contact": {},
-        "version": "1.0"
+        "contact": {}
     },
     "host": "127.0.0.1:5000",
     "basePath": "/",
@@ -159,6 +156,75 @@
                 "responses": {
                     "201": {
                         "description": "Returns Event Id",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/events/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create multiple events in one go",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Batch Create Events",
+                "parameters": [
+                    {
+                        "description": "Batch Data",
+                        "name": "batch",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.BatchEventRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
                         "schema": {
                             "allOf": [
                                 {
@@ -554,6 +620,22 @@
                 "data": {},
                 "error": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.BatchEventRequest": {
+            "type": "object",
+            "required": [
+                "events"
+            ],
+            "properties": {
+                "events": {
+                    "type": "array",
+                    "maxItems": 5000,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/domain.EventDTO"
+                    }
                 }
             }
         },
