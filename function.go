@@ -88,14 +88,23 @@ func setupApplication() {
 	corsOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
 	isProduction := os.Getenv("APP_ENV") == "production"
 
-	// Build the middleware chain
+	// --- Middleware Chain (Order Matters) ---
+
+	// 1. Base business logic
 	handler := transport.WithCompression(router)
+
+	// 2. Auth & Security
 	handler = transport.WithAuthProtection(handler, authClient)
 	handler = transport.WithSecurityHeaders(handler, isProduction)
 	handler = transport.WithCORS(handler, corsOrigin)
 
-	// This ensures the response writes a 503 if logic takes > 20s.
-	// 20s is chosen to be well within default Cloud Function timeout (60s).
+	// 3. Resilience & Observability
+	// TraceID must be outer to wrap context for logs
+	handler = transport.WithTraceID(handler)
+	// Recovery must be outer to catch panics in any middleware below
+	handler = transport.WithRecovery(handler)
+
+	// 4. Timeout (Standard Lib) - Outermost logic barrier
 	timeoutDuration := 15 * time.Second
 	timeoutMsg := `{"error": "Gateway Timeout: Upstream processing duration exceeded"}`
 	handler = http.TimeoutHandler(handler, timeoutDuration, timeoutMsg)

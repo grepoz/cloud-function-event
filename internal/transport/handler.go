@@ -5,20 +5,24 @@ import (
 	"cloud-function-event/internal/service"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/andybalholm/brotli"
 )
 
+// ProjectID is needed for trace formatting. Fetch it once.
+var googleProjectID = os.Getenv("GOOGLE_CLOUD_PROJECT")
+
+// Setup logger with a Handler that handles context for Tracing
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+		// Map standard keys to Google Cloud Logging keys
 		if a.Key == slog.LevelKey {
 			a.Key = "severity"
-			// Map standard levels to GCP levels if needed (default usually works)
 		}
 		if a.Key == slog.MessageKey {
 			a.Key = "message"
@@ -27,7 +31,20 @@ var logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 	},
 }))
 
-// NewRouter initializes the main HTTP handler using Go 1.22+ ServeMux
+// Log helper to extract trace from context and inject it into the log entry
+func logError(ctx context.Context, msg string, err error) {
+	args := []any{"error", err}
+
+	// Add Trace ID to the log entry if present in context
+	if traceID, ok := ctx.Value("trace_id").(string); ok && googleProjectID != "" {
+		// GCP Format: projects/[PROJECT-ID]/traces/[TRACE-ID]
+		traceVal := fmt.Sprintf("projects/%s/traces/%s", googleProjectID, traceID)
+		args = append(args, "logging.googleapis.com/trace", traceVal)
+	}
+
+	logger.ErrorContext(ctx, msg, args...)
+}
+
 func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingService) http.Handler {
 	mux := http.NewServeMux()
 
@@ -62,96 +79,87 @@ func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingServic
 	return mux
 }
 
-func WithTimeout(next http.Handler, duration time.Duration) http.Handler {
+// WithTraceID extracts the Google Cloud Trace ID header.
+// This allows logs to be correlated in the Logs Explorer.
+func WithTraceID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Create a context that cancels after 'duration'
-		ctx, cancel := context.WithTimeout(r.Context(), duration)
-		defer cancel()
+		traceHeader := r.Header.Get("X-Cloud-Trace-Context")
+		var traceID string
+		if traceHeader != "" {
+			// Header format: TRACE_ID/SPAN_ID;o=TRACE_TRUE
+			parts := strings.Split(traceHeader, "/")
+			if len(parts) > 0 {
+				traceID = parts[0]
+			}
+		}
 
-		// Pass the new context to the next handler
-		r = r.WithContext(ctx)
-
-		// Create a channel to signal when the handler is done
-		done := make(chan struct{})
-
-		// Use a panic-safe goroutine to run the handler
-		go func() {
-			defer func() {
-				if rec := recover(); rec != nil {
-					logger.Error("PANIC in handler", "error", rec)
-				}
-				close(done)
-			}()
-
-			// We need to wrap the writer to ignore writes if timeout occurs,
-			// but http.TimeoutHandler is the standard stdlib way to do this.
-			// However, since we want to compose with other middleware,
-			// let's use the standard http.TimeoutHandler logic:
+		if traceID != "" {
+			ctx := context.WithValue(r.Context(), "trace_id", traceID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		} else {
 			next.ServeHTTP(w, r)
-		}()
-
-		select {
-		case <-done:
-			// Handler finished normally
-		case <-ctx.Done():
-			// Timeout happened
-			w.WriteHeader(http.StatusGatewayTimeout)
-			_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: "Request timed out"})
 		}
 	})
 }
 
-func WithCORS(next http.Handler, origin string) http.Handler {
+// WithRecovery recovers from panics and logs them as critical errors
+func WithRecovery(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Default to "*" if no origin is specified in env
-		if origin == "" {
-			origin = "*"
-		}
+		defer func() {
+			if rec := recover(); rec != nil {
+				err, ok := rec.(error)
+				if !ok {
+					err = fmt.Errorf("%v", rec)
+				}
+				// Log with Trace ID context
+				logError(r.Context(), "PANIC RECOVERED", err)
 
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-
-		// Handle Preflight requests
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
+				w.WriteHeader(http.StatusInternalServerError)
+				_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: "Internal Server Error"})
+			}
+		}()
 		next.ServeHTTP(w, r)
 	})
 }
 
-// respondError is a shared helper for JSON error responses
-
 func respondError(w http.ResponseWriter, err error) {
-	// 1. Handle Validation Errors (400 Bad Request)
 	if _, ok := err.(*domain.ValidationError); ok {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
 		return
 	}
-
-	// 2. Handle Not Found (404 Not Found)
 	if err.Error() == "event not found" {
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
 		return
 	}
 
-	// 3. Handle Internal Errors (500 Internal Server Error)
-	// FIX: Use structured logging
-	logger.Error("SERVER ERROR",
-		"error", err,
-		"component", "api_handler", // Easier filtering in GCP
-	)
+	// Use context-aware logger
+	// We need request context here, but respondError signature doesn't have it.
+	// In a real scenario, pass r.Context() to respondError.
+	// For now, we log without context or you can refactor respondError to take ctx.
+	logger.Error("SERVER ERROR", "error", err.Error(), "component", "api_handler")
 
-	// Send a GENERIC error to the client to prevent info leakage
 	w.WriteHeader(http.StatusInternalServerError)
 	_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: "Internal Server Error"})
 }
 
-// WithCompression is a middleware for Brotli compression
+func WithCORS(next http.Handler, origin string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if origin == "" {
+			origin = "*"
+		}
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func WithCompression(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "br") {
