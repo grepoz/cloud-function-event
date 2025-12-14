@@ -3,3 +3,4 @@ firestore-debug.log
 firebase-debug.log
 .env
 firestore.rules
+vendor
