@@ -1,7 +1,7 @@
 package unit_tests
 
 import (
-	"bibently/backend/internal/transport"
+	"bibently.com/backend/internal/transport"
 	"net/http"
 	"net/http/httptest"
 	"testing"

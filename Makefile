@@ -60,11 +60,12 @@ deploy: tidy rules
 	--trigger-http \
 	--allow-unauthenticated \
 	--set-env-vars APP_ENV=production,CORS_ALLOWED_ORIGIN=* \
-#	--set-env-vars=$(shell grep -v '^#' .env | xargs | tr ' ' ',')
 	--service-account=$(FUNCTION_SERVICE_ACCOUNT)
 	# Deploy the generated rules to Firestore
 	firebase deploy --only firestore:rules
 
+# can set all env vars from .env file
+#	--set-env-vars=$(shell grep -v '^#' .env | xargs | tr ' ' ',')
 
 # check the service account used by the function
 #gcloud functions describe $(FUNCTION_TARGET) \

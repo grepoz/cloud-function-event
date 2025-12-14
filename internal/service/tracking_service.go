@@ -1,8 +1,8 @@
 package service
 
 import (
-	"bibently/backend/internal/domain"
-	"bibently/backend/internal/repository"
+	"bibently.com/backend/internal/domain"
+	"bibently.com/backend/internal/repository"
 	"context"
 	"time"
 

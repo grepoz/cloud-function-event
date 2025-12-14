@@ -1,9 +1,9 @@
 package function
 
 import (
-	"bibently/backend/internal/repository"
-	"bibently/backend/internal/service"
-	"bibently/backend/internal/transport"
+	"bibently.com/backend/internal/repository"
+	"bibently.com/backend/internal/service"
+	"bibently.com/backend/internal/transport"
 	"context"
 	"log"
 	"net/http"
@@ -16,7 +16,7 @@ import (
 	firebase "firebase.google.com/go/v4"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 
-	_ "bibently/backend/docs"
+	_ "bibently.com/backend/docs"
 
 	httpSwagger "github.com/swaggo/http-swagger"
 )

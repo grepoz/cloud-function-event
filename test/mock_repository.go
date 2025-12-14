@@ -1,7 +1,7 @@
 package test
 
 import (
-	"bibently/backend/internal/domain"
+	"bibently.com/backend/internal/domain"
 	"context"
 )
 

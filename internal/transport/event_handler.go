@@ -1,8 +1,8 @@
 package transport
 
 import (
-	"bibently/backend/internal/domain"
-	"bibently/backend/internal/service"
+	"bibently.com/backend/internal/domain"
+	"bibently.com/backend/internal/service"
 	"encoding/json"
 	"fmt"
 	"net/http"

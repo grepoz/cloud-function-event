@@ -1,4 +1,4 @@
-module bibently/backend
+module bibently.com/backend
 
 go 1.25.0
 

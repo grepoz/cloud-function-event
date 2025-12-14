@@ -1,8 +1,8 @@
 package unit_tests
 
 import (
-	"bibently/backend/internal/domain"
-	"bibently/backend/internal/service"
+	"bibently.com/backend/internal/domain"
+	"bibently.com/backend/internal/service"
 	"context"
 	"errors"
 	"testing"

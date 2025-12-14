@@ -1,10 +1,10 @@
 package integration_tests
 
 import (
-	"bibently/backend/internal/domain"
-	"bibently/backend/internal/repository"
-	"bibently/backend/internal/service"
-	"bibently/backend/internal/transport"
+	"bibently.com/backend/internal/domain"
+	"bibently.com/backend/internal/repository"
+	"bibently.com/backend/internal/service"
+	"bibently.com/backend/internal/transport"
 	"bytes"
 	"context"
 	"encoding/json"

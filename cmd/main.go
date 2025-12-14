@@ -10,9 +10,9 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 
 	// Blank-import the function package so the init() runs
-	_ "bibently/backend"
+	_ "bibently.com/backend"
 
-	emulatorAuth "bibently/backend/internal/auth"
+	emulatorAuth "bibently.com/backend/internal/auth"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"

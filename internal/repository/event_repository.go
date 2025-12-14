@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"bibently/backend/internal/domain"
+	"bibently.com/backend/internal/domain"
 	"context"
 	"encoding/base64"
 	"encoding/json"
