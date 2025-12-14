@@ -128,14 +128,16 @@ func TestTrackingHandler_Create(t *testing.T) {
 	}
 }
 
-func TestHandler_UpdateEvent_UseNumber(t *testing.T) {
+// TestHandler_UpdateEvent_Success validates the happy path using the new DTO logic
+func TestHandler_UpdateEvent_Success(t *testing.T) {
 	mockSvc := &MockEventService{
 		UpdateFunc: func(ctx context.Context, id string, updates map[string]interface{}) error {
 			if id != "123" {
 				t.Errorf("Expected id '123', got '%s'", id)
 			}
+			// The DTO now guarantees this is a *float64 which dereferences to float64
 			if price, ok := updates["price"].(float64); !ok || price != 99.99 {
-				t.Errorf("Expected price 99.99 (float64), got %v", updates["price"])
+				t.Errorf("Expected price 99.99 (float64), got %v (type %T)", updates["price"], updates["price"])
 			}
 			return nil
 		},
@@ -154,7 +156,82 @@ func TestHandler_UpdateEvent_UseNumber(t *testing.T) {
 	}
 }
 
-// --- NEW TESTS ---
+// TestHandler_UpdateEvent_Security_MassAssignment verifies that injected fields are ignored
+func TestHandler_UpdateEvent_Security_MassAssignment(t *testing.T) {
+	mockSvc := &MockEventService{
+		UpdateFunc: func(ctx context.Context, id string, updates map[string]interface{}) error {
+			// 1. Verify injected fields are NOT present
+			if _, exists := updates["is_admin"]; exists {
+				t.Error("Security Fail: 'is_admin' field was passed to service")
+			}
+			if _, exists := updates["created_at"]; exists {
+				t.Error("Security Fail: 'created_at' field was passed to service")
+			}
+
+			// 2. Verify valid fields ARE present
+			if val, ok := updates["event_name"]; !ok || val != "Hacked Name" {
+				t.Error("Expected 'event_name' to be updated")
+			}
+			return nil
+		},
+	}
+	router := transport.NewRouter(mockSvc, &MockTrackingService{})
+
+	// Malicious Payload: includes valid field + ignored fields
+	body := `{"event_name": "Hacked Name", "is_admin": true, "created_at": "2020-01-01"}`
+	req := httptest.NewRequest(http.MethodPut, "/events/123", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200 OK, got %d", w.Code)
+	}
+}
+
+// TestHandler_UpdateEvent_TypePollution verifies that wrong types cause 400 Bad Request
+func TestHandler_UpdateEvent_TypePollution(t *testing.T) {
+	mockSvc := &MockEventService{
+		UpdateFunc: func(ctx context.Context, id string, updates map[string]interface{}) error {
+			t.Error("Service should NOT be called for type pollution")
+			return nil
+		},
+	}
+	router := transport.NewRouter(mockSvc, &MockTrackingService{})
+
+	// "price" expects number, we send string
+	body := `{"price": "free"}`
+	req := httptest.NewRequest(http.MethodPut, "/events/123", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400 Bad Request for type mismatch, got %d", w.Code)
+	}
+}
+
+// TestHandler_UpdateEvent_Validation verifies DTO validation rules (e.g. gte=0)
+func TestHandler_UpdateEvent_Validation(t *testing.T) {
+	mockSvc := &MockEventService{
+		UpdateFunc: func(ctx context.Context, id string, updates map[string]interface{}) error {
+			t.Error("Service should NOT be called for validation error")
+			return nil
+		},
+	}
+	router := transport.NewRouter(mockSvc, &MockTrackingService{})
+
+	// "price" must be >= 0
+	body := `{"price": -50.00}`
+	req := httptest.NewRequest(http.MethodPut, "/events/123", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400 Bad Request for validation error, got %d", w.Code)
+	}
+}
 
 func TestEventHandler_Create_InvalidJSON(t *testing.T) {
 	router := transport.NewRouter(&MockEventService{}, &MockTrackingService{})

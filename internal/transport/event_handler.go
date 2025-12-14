@@ -137,24 +137,58 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		respondError(w, domain.ErrValidation("Missing id path parameter"))
 		return
 	}
-	var updates map[string]interface{}
-	decoder := json.NewDecoder(r.Body)
-	decoder.UseNumber()
-	if err := decoder.Decode(&updates); err != nil {
-		respondError(w, domain.ErrValidation("Invalid JSON body"))
+
+	// 1. Decode into the strict DTO instead of a generic map
+	var dto domain.UpdateEventDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		respondError(w, domain.ErrValidation("Invalid JSON body or type mismatch"))
 		return
 	}
-	for k, v := range updates {
-		if num, ok := v.(json.Number); ok {
-			if f, err := num.Float64(); err == nil {
-				updates[k] = f
-			}
-		}
+
+	// 2. Validate the DTO (checks max length, number ranges, formats)
+	if err := domain.Validate.Struct(dto); err != nil {
+		respondError(w, domain.ErrValidation(err.Error()))
+		return
 	}
+
+	// 3. Convert validated DTO to a safe map for the repository
+	// Only fields that were actually present (non-nil) are added.
+	updates := make(map[string]interface{})
+
+	if dto.EventName != nil {
+		updates["event_name"] = *dto.EventName
+	}
+	if dto.City != nil {
+		updates["city"] = *dto.City
+	}
+	if dto.Price != nil {
+		updates["price"] = *dto.Price
+	}
+	if dto.Type != nil {
+		updates["type"] = *dto.Type
+	}
+	if dto.StartTime != nil {
+		// We already validated the format in the DTO, so parsing is safe
+		t, _ := time.Parse(time.RFC3339, *dto.StartTime)
+		updates["start_time"] = t
+	}
+	if dto.EndTime != nil {
+		t, _ := time.Parse(time.RFC3339, *dto.EndTime)
+		updates["end_time"] = t
+	}
+
+	// 4. Fail if the request contained no valid updatable fields
+	if len(updates) == 0 {
+		respondError(w, domain.ErrValidation("No valid fields provided for update"))
+		return
+	}
+
+	// 5. Call Service
 	if err := h.service.UpdateEvent(r.Context(), id, updates); err != nil {
 		respondError(w, err)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: "Updated successfully"})
 }

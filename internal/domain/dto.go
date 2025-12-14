@@ -68,6 +68,18 @@ type EventListDTO struct {
 	Type      string `validate:"omitempty,oneof=concert festival theater standup conference meetup other"`
 }
 
+type UpdateEventDTO struct {
+	EventName *string  `json:"event_name" validate:"omitempty,max=100"`
+	City      *string  `json:"city" validate:"omitempty,max=50,printascii"`
+	Price     *float64 `json:"price" validate:"omitempty,gte=0"`
+	Type      *string  `json:"type" validate:"omitempty,event_type"`
+	StartTime *string  `json:"start_time" validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
+	EndTime   *string  `json:"end_time" validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
+
+	// You can add other fields here as needed (e.g. OrganizerName, Description)
+	// Important: Do NOT include 'id' or 'created_at' to prevent overwriting.
+}
+
 type BatchEventRequest struct {
 	Events []EventDTO `json:"events" validate:"required,min=1,max=5000,dive"`
 }
