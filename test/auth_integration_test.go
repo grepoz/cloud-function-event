@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -35,7 +34,7 @@ func generateValidEmulatorToken(uid, projectID string) string {
 		"sub":       uid,
 		"iat":       now,
 		"exp":       now + 3600, // Expires in 1 hour
-		"email":     "admin@test.local",
+		"email":     uid + "@test.local",
 	}
 
 	pBytes, _ := json.Marshal(payload)
@@ -53,10 +52,10 @@ func ensureUserExists(ctx context.Context, client *auth.Client, uid string) erro
 
 	params := (&auth.UserToCreate{}).
 		UID(uid).
-		Email("admin@test.local").
+		Email(uid + "@test.local").
 		EmailVerified(true).
 		Password("password123").
-		DisplayName("Integration Test Admin")
+		DisplayName("Integration Test User " + uid)
 
 	_, err = client.CreateUser(ctx, params)
 	return err
@@ -65,10 +64,11 @@ func ensureUserExists(ctx context.Context, client *auth.Client, uid string) erro
 func setupAuthIntegration(t *testing.T) (http.Handler, *firestore.Client) {
 	t.Helper()
 
-	// 1. Force Emulator Hosts
-	// Must be set BEFORE firebase.NewApp is called
-	_ = os.Setenv("FIRESTORE_EMULATOR_HOST", "localhost:8080")
-	_ = os.Setenv("FIREBASE_AUTH_EMULATOR_HOST", "localhost:9099")
+	// 1. Force Emulator Hosts & Admin UID
+	// t.Setenv automatically restores variables after the test finishes
+	t.Setenv("FIRESTORE_EMULATOR_HOST", "localhost:8080")
+	t.Setenv("FIREBASE_AUTH_EMULATOR_HOST", "localhost:9099")
+	t.Setenv("FIRESTORE_ADMIN_UID", TestAdminUID)
 
 	ctx := context.Background()
 
@@ -89,7 +89,7 @@ func setupAuthIntegration(t *testing.T) (http.Handler, *firestore.Client) {
 		t.Fatalf("Failed to get auth client: %v", err)
 	}
 
-	// 4. Create User in Emulator
+	// 4. Create Admin User in Emulator
 	if err := ensureUserExists(ctx, authClient, TestAdminUID); err != nil {
 		t.Fatalf("Failed to ensure admin user exists: %v", err)
 	}
@@ -131,13 +131,13 @@ func TestAuth_Strict_Blocking(t *testing.T) {
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
 
-		if w.Code != http.StatusUnauthorized {
-			t.Errorf("Expected 401 Unauthorized, got %d", w.Code)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("Expected 403 Unauthorized, got %d", w.Code)
 		}
 	})
 }
 
-// TestAuth_Authenticated_Access: Valid Token Logic
+// TestAuth_Authenticated_Access: Verifies Role-Based Access Control
 func TestAuth_Authenticated_Access(t *testing.T) {
 	handler, client := setupAuthIntegration(t)
 	t.Cleanup(func() {
@@ -146,32 +146,48 @@ func TestAuth_Authenticated_Access(t *testing.T) {
 			return
 		}
 	})
-	// Ensure we don't crash on cleanup by closing client last (LIFO)
-	// You may need to copy 'cleanupFirestore' from integration_test.go or remove this line if it causes issues
-	// t.Cleanup(func() { cleanupFirestore(t, client) })
 
-	// Generate fresh token
-	token := generateValidEmulatorToken(TestAdminUID, TestProjectID)
-	authHeader := "Bearer " + token
+	// Generate tokens
+	adminToken := generateValidEmulatorToken(TestAdminUID, TestProjectID)
+	adminAuthHeader := "Bearer " + adminToken
 
-	t.Run("Allow_Authenticated_Write", func(t *testing.T) {
+	t.Run("Allow_Admin_Write", func(t *testing.T) {
 		// Valid Event Payload
 		bodyStr := `{"event_name": "Auth Test Event", "city": "Warsaw", "type": "concert", "price": 100, "start_time": "2024-12-31T20:00:00Z"}`
 		req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(bodyStr)))
-		req.Header.Set("Authorization", authHeader)
+		req.Header.Set("Authorization", adminAuthHeader)
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
 
 		if w.Code != http.StatusCreated {
-			t.Errorf("Expected 201 Created, got %d. Body: %s", w.Code, w.Body.String())
+			t.Errorf("Expected 201 Created for Admin, got %d. Body: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("Block_NonAdmin_Write", func(t *testing.T) {
+		// Scenario: A regular user (valid token, but wrong UID) tries to write
+		regularToken := generateValidEmulatorToken("regular_user", TestProjectID)
+		regularHeader := "Bearer " + regularToken
+
+		bodyStr := `{"event_name": "Illegal Event", "city": "Nowhere", "type": "concert", "price": 0, "start_time": "2024-12-31T20:00:00Z"}`
+		req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(bodyStr)))
+		req.Header.Set("Authorization", regularHeader)
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		// Expect 403 Forbidden because they are NOT the admin
+		if w.Code != http.StatusForbidden {
+			t.Errorf("Expected 403 Forbidden for Non-Admin, got %d. Body: %s", w.Code, w.Body.String())
 		}
 	})
 
 	t.Run("Allow_Authenticated_Read", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/events/", nil)
-		req.Header.Set("Authorization", authHeader)
+		req.Header.Set("Authorization", adminAuthHeader)
 
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
@@ -210,21 +226,17 @@ func TestAuth_Guest_Mode(t *testing.T) {
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
 
-		if w.Code != http.StatusUnauthorized {
-			t.Errorf("Expected 401 Unauthorized for guest write, got %d", w.Code)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("Expected 403 Unauthorized for guest write, got %d", w.Code)
 		}
 	})
 }
 
 func TestAuth_Guest_Mode_Restricted(t *testing.T) {
-	// Setup with publicRead = true
 	handler, client := setupAuthIntegration(t)
-	defer func(client *firestore.Client) {
-		err := client.Close()
-		if err != nil {
-
-		}
-	}(client) // Ensure you use your robust cleanup logic here
+	t.Cleanup(func() {
+		_ = client.Close()
+	})
 
 	// 1. Events should be ALLOWED
 	t.Run("Allow_Guest_Events", func(t *testing.T) {
@@ -236,7 +248,7 @@ func TestAuth_Guest_Mode_Restricted(t *testing.T) {
 		}
 	})
 
-	// 2. Tracking should be BLOCKED (even if publicRead is true)
+	// 2. Tracking should be BLOCKED (even if publicRead is true for events)
 	t.Run("Block_Guest_Tracking", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tracking/", nil)
 		w := httptest.NewRecorder()
