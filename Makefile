@@ -50,7 +50,7 @@ swagger:
 #  to debug run `Debug local function` configuration and go: http://127.0.0.1:5000/swagger/index.html
 
 # Deploy to Google Cloud Functions (Gen 2)
-deploy: rules
+deploy:
 	go mod vendor
 	gcloud functions deploy bibently-functions \
 	--gen2 \
@@ -60,12 +60,12 @@ deploy: rules
 	--entry-point=$(FUNCTION_TARGET) \
 	--trigger-http \
 	--allow-unauthenticated \
-	--set-env-vars APP_ENV=production,CORS_ALLOWED_ORIGIN=*,FIRESTORE_DATABASE_ID=bibently-store,FIRESTORE_ADMIN_UID=$(FIRESTORE_ADMIN_UID) \
+	--set-env-vars APP_ENV=production,CORS_ALLOWED_ORIGIN=*,FIRESTORE_DATABASE_ID=bibently-store,FIRESTORE_ADMIN_UID=$(FIRESTORE_ADMIN_UID),GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) \
 	--service-account=$(FUNCTION_SERVICE_ACCOUNT)
 	# Deploy the generated rules to Firestore
-	firebase deploy --only firestore
+	#firebase deploy --only firestore
 
-deploy-firebase:
+deploy-firebase: rules
 	firebase deploy --only firestore
 
 # can set all env vars from .env file

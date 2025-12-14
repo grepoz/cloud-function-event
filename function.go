@@ -1,9 +1,6 @@
 package function
 
 import (
-	"bibently.com/backend/internal/repository"
-	"bibently.com/backend/internal/service"
-	"bibently.com/backend/internal/transport"
 	"context"
 	"log"
 	"net/http"
@@ -11,6 +8,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"bibently.com/backend/internal/repository"
+	"bibently.com/backend/internal/service"
+	"bibently.com/backend/internal/transport"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
@@ -51,10 +52,6 @@ func setupApplication() {
 	ctx := context.Background()
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	databaseId := os.Getenv("FIRESTORE_DATABASE_ID")
-
-	if projectID == "" {
-		projectID = "local-project-id"
-	}
 
 	// 1. Initialize Firestore
 	fsClient, err := firestore.NewClientWithDatabase(ctx, projectID, databaseId)
