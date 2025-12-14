@@ -69,7 +69,7 @@ type EventListDTO struct {
 }
 
 type BatchEventRequest struct {
-	Events []EventDTO `json:"events" validate:"required,min=1,dive"`
+	Events []EventDTO `json:"events" validate:"required,min=1,max=5000,dive"`
 }
 
 func EventDTOToModel(dto *EventDTO) (*Event, error) {
