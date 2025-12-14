@@ -1,5 +1,6 @@
 {
   "firestore": {
+    "database": "bibently-store",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
