@@ -1,8 +1,9 @@
-package test
+package unit_tests
 
 import (
 	"cloud-function-event/internal/domain"
 	"cloud-function-event/internal/service"
+	"cloud-function-event/test"
 	"context"
 	"errors"
 	"reflect"
@@ -10,7 +11,7 @@ import (
 )
 
 func TestCreateEvent(t *testing.T) {
-	mockRepo := &MockRepository{
+	mockRepo := &test.MockRepository{
 		SaveFunc: func(ctx context.Context, event *domain.Event) error {
 			if event.Id == "" {
 				return errors.New("id was not generated")
@@ -32,7 +33,7 @@ func TestCreateEvent(t *testing.T) {
 }
 
 func TestCreateEvent_Validation(t *testing.T) {
-	mockRepo := &MockRepository{} // No methods needed, should fail before repo call
+	mockRepo := &test.MockRepository{} // No methods needed, should fail before repo call
 	svc := service.NewEventService(mockRepo)
 
 	// Case: Empty EventName
@@ -53,7 +54,7 @@ func TestCreateEvent_Validation(t *testing.T) {
 }
 
 func TestBatchCreateEvents(t *testing.T) {
-	mockRepo := &MockRepository{
+	mockRepo := &test.MockRepository{
 		BatchSaveFunc: func(ctx context.Context, events []*domain.Event) error {
 			if len(events) != 2 {
 				t.Errorf("Expected 2 events in batch, got %d", len(events))
@@ -84,7 +85,7 @@ func TestBatchCreateEvents(t *testing.T) {
 }
 
 func TestUpdateEvent(t *testing.T) {
-	mockRepo := &MockRepository{
+	mockRepo := &test.MockRepository{
 		UpdateFunc: func(ctx context.Context, id string, updates map[string]interface{}) error {
 			return nil
 		},
@@ -116,7 +117,7 @@ func TestUpdateEvent(t *testing.T) {
 
 func TestGetEvent(t *testing.T) {
 	expectedEvent := &domain.Event{Id: "123", EventName: "Test Event"}
-	mockRepo := &MockRepository{
+	mockRepo := &test.MockRepository{
 		GetByIDFunc: func(ctx context.Context, id string) (*domain.Event, error) {
 			if id == "123" {
 				return expectedEvent, nil
@@ -144,7 +145,7 @@ func TestGetEvent(t *testing.T) {
 }
 
 func TestDeleteEvent(t *testing.T) {
-	mockRepo := &MockRepository{
+	mockRepo := &test.MockRepository{
 		DeleteFunc: func(ctx context.Context, id string) error {
 			if id == "valid" {
 				return nil
@@ -164,7 +165,7 @@ func TestDeleteEvent(t *testing.T) {
 }
 
 func TestListEvents_PageSizeCap(t *testing.T) {
-	mockRepo := &MockRepository{
+	mockRepo := &test.MockRepository{
 		ListFunc: func(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
 			if search.Sorting.PageSize != 100 {
 				t.Errorf("Expected PageSize to be capped at 100, got %d", search.Sorting.PageSize)

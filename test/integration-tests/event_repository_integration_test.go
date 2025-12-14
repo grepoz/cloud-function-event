@@ -1,4 +1,4 @@
-package test
+package integration_tests
 
 import (
 	"cloud-function-event/internal/domain"
