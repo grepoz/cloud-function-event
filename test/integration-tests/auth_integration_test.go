@@ -19,7 +19,7 @@ import (
 	"firebase.google.com/go/v4/auth"
 )
 
-const TestAdminUID = "admin_user"
+const TestAdminUID = "admin_user_xyz_123_secret_id"
 const TestProjectID = "local-project-id"
 
 // generateValidEmulatorToken creates a fresh, unsigned JWT for the emulator

@@ -12,16 +12,17 @@ tidy:
 	go mod tidy
 
 # Runs all unit tests in the project
-test: tidy
-	go test ./... -v
+unit-test: tidy
+	go test ./test/unit-tests/... -v
 
 # Uruchamia testy integracyjne (wymaga uruchomionego emulatora w innym terminalu)
 test-integration: tidy
 	FIRESTORE_EMULATOR_HOST=$(FIRESTORE_EMULATOR_HOST) \
+	FIREBASE_AUTH_EMULATOR_HOST=$(FIREBASE_AUTH_EMULATOR_HOST) \
 	FIRESTORE_DATABASE_ID=$(FIRESTORE_DATABASE_ID) \
 	GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) \
 	FIRESTORE_ADMIN_UID=$(FIRESTORE_ADMIN_UID) \
-	go test ./test/... -v -count=1
+	go test ./test/integration-tests/... -v -count=1
 
 rules:
 	@echo "Generating firestore.rules..."
