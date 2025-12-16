@@ -1,0 +1,32 @@
+# deploy-config.yaml
+# Usage: gcloud functions deploy NAME --flags-file=deploy-config.yaml
+
+# --- Deployment Basics ---
+--gen2: true
+--region: europe-west1
+--runtime: go125
+--source: .
+--entry-point: BibentlyFunctions
+--trigger-http: true
+--allow-unauthenticated: true
+
+# --- Scaling & Concurrency ---
+--concurrency: 25
+--min-instances: 0
+--max-instances: 1
+
+# --- Resources ---
+--memory: 512MiB
+--cpu: 2
+--timeout: 10s
+
+# --- Network ---
+--ingress-settings: all
+
+# --- Environment Variables ---
+# Note: It is often safer to keep ALL env vars in the Makefile to ensure
+# they merge correctly, but you can define static ones here.
+--update-env-vars:
+  APP_ENV: production
+  CORS_ALLOWED_ORIGIN: "*"
+  FIRESTORE_DATABASE_ID: bibently-store

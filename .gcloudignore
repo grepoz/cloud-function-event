@@ -11,6 +11,7 @@ cmd/
 Makefile
 README.md
 qodana.yaml
+vendor/
 
 # Firebase / Emulator specific (Not needed in GCF)
 firebase.json
