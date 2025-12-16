@@ -45,7 +45,7 @@ run-real: tidy
 	GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=BibentlyFunctions LOCAL_ONLY=true FIRESTORE_DATABASE_ID="bibently-store" go run cmd/main.go
 
 swagger:
-	swag init -g internal/function/http.go --output docs
+	swag init -g function.go --output docs
 
 #  to debug run `Debug local function` configuration and go: http://127.0.0.1:3000/swagger/index.html
 
