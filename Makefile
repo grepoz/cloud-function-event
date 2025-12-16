@@ -45,23 +45,10 @@ run-real: tidy
 	GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) FUNCTION_TARGET=BibentlyFunctions LOCAL_ONLY=true FIRESTORE_DATABASE_ID="bibently-store" go run cmd/main.go
 
 swagger:
-	swag init -g function.go --output docs
+	swag init -g internal/function/http.go --output docs
 
 #  to debug run `Debug local function` configuration and go: http://127.0.0.1:3000/swagger/index.html
 
-# Deploy to Google Cloud Functions (Gen 2)
-#deploy:
-#	go mod vendor
-#	gcloud functions deploy bibently-functions \
-#	--gen2 \
-#	--runtime=go125 \
-#	--region=europe-west1 \
-#	--source=. \
-#	--entry-point=$(FUNCTION_TARGET) \
-#	--trigger-http \
-#	--allow-unauthenticated \
-#	--set-env-vars APP_ENV=production,CORS_ALLOWED_ORIGIN=*,FIRESTORE_DATABASE_ID=bibently-store,FIRESTORE_ADMIN_UID=$(FIRESTORE_ADMIN_UID),GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT) \
-#	--service-account=$(FUNCTION_SERVICE_ACCOUNT)
 
 deploy:
 	gcloud functions deploy bibently-functions \

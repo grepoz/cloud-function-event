@@ -35,10 +35,12 @@ var (
 // @in header
 // @name Authorization
 func init() {
+	log.Println("🔥 function init() executed")
 	// Register the entry point, but DO NOT initialize clients here.
 	// We defer that to the first request.
 	functions.HTTP("BibentlyFunctions", func(w http.ResponseWriter, r *http.Request) {
 		// Lazy initialization on first request
+		log.Println("REQUEST PATH:", r.URL.Path)
 		initOnce.Do(func() {
 			setupApplication()
 		})
