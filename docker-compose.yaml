@@ -1,0 +1,22 @@
+services:
+  bibently-functions:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      # You can access endpoints at http://127.0.0.1:3000/
+      - "127.0.0.1:3000:3000"
+    environment:
+      - PORT=3000
+      - LOCAL_ONLY=FALSE
+      - CORS_ALLOWED_ORIGIN=*
+      - GOOGLE_CLOUD_PROJECT=docker-project-id
+      - FIRESTORE_DATABASE_ID=docker-bibently-store
+      - APP_ENV=development
+      - FIRESTORE_EMULATOR_HOST=host.docker.internal:8080
+      - FIREBASE_AUTH_EMULATOR_HOST=host.docker.internal:9099
+      - FIRESTORE_ADMIN_UID=local-admin-uid
+
+    # (Optional) Mount source code for simpler rebuilding (requires restart)
+    # volumes:
+    #   - .:/app

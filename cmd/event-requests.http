@@ -1,5 +1,5 @@
 ### GET request to example server
-@host = localhost:5000
+@host = localhost:3000
 @event_id = 4a761353-7eb4-4565-8491-7a4c6ee4404d
 
 ###  List all events

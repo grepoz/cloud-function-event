@@ -47,7 +47,7 @@ run-real: tidy
 swagger:
 	swag init -g function.go --output docs
 
-#  to debug run `Debug local function` configuration and go: http://127.0.0.1:5000/swagger/index.html
+#  to debug run `Debug local function` configuration and go: http://127.0.0.1:3000/swagger/index.html
 
 # Deploy to Google Cloud Functions (Gen 2)
 #deploy:

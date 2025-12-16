@@ -28,7 +28,7 @@ var (
 	initOnce        sync.Once
 )
 
-// @host 127.0.0.1:5000
+// @host 127.0.0.1:3000
 // @BasePath /
 
 // @securityDefinitions.apikey BearerAuth

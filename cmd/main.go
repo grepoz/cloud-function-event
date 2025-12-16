@@ -22,7 +22,7 @@ import (
 // the main function starts the Functions Framework server - only needed when running locally
 func main() {
 	// 1. Setup Port
-	port := "5000"
+	port := "3000"
 	if envPort := os.Getenv("PORT"); envPort != "" {
 		port = envPort
 	}
