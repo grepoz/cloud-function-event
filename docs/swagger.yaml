@@ -6,6 +6,43 @@ definitions:
       error:
         type: string
     type: object
+  domain.Address:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      name:
+        type: string
+      postal_code:
+        type: string
+      raw_address_string:
+        type: string
+      street:
+        type: string
+      type:
+        type: string
+    type: object
+  domain.AddressDTO:
+    properties:
+      city:
+        description: City is usually required
+        type: string
+      country:
+        type: string
+      name:
+        type: string
+      postal_code:
+        type: string
+      raw_address_string:
+        type: string
+      street:
+        type: string
+      type:
+        type: string
+    required:
+    - city
+    type: object
   domain.BatchEventRequest:
     properties:
       events:
@@ -19,103 +56,179 @@ definitions:
     type: object
   domain.Event:
     properties:
-      city:
+      article_body:
         type: string
-      country:
+      attendance_mode:
         type: string
-      createdAt:
+      created_at:
         type: string
-      endTime:
+      date_published:
         type: string
-      eventName:
+      description:
         type: string
-      eventURL:
+      end_date:
         type: string
-      fullAddress:
+      event_status:
         type: string
-      hasTickets:
-        type: boolean
       id:
         type: string
-      imageUrl:
+      image_url:
         type: string
-      latitude:
+      keywords:
+        items:
+          type: string
+        type: array
+      location:
+        $ref: '#/definitions/domain.Location'
+      name:
         type: string
-      longitude:
-        type: string
-      organizerName:
-        type: string
-      price:
-        type: number
+      offer:
+        $ref: '#/definitions/domain.Offer'
+      organizer:
+        $ref: '#/definitions/domain.Organization'
+      performer:
+        $ref: '#/definitions/domain.Organization'
       provider:
         type: string
-      startTime:
-        type: string
-      state:
-        type: string
-      street:
-        type: string
-      timezone:
+      start_date:
         type: string
       type:
-        $ref: '#/definitions/domain.EventType'
+        description: '"Event"'
+        type: string
+      url:
+        type: string
     type: object
   domain.EventDTO:
     properties:
-      city:
+      article_body:
         type: string
-      end_time:
-        example: "2024-07-20T22:00:00Z"
+      attendance_mode:
         type: string
-      event_name:
+      date_published:
         type: string
+      description:
+        type: string
+      end_date:
+        type: string
+      event_status:
+        type: string
+      image_url:
+        type: string
+      keywords:
+        items:
+          type: string
+        type: array
+      location:
+        $ref: '#/definitions/domain.LocationDTO'
+      name:
+        type: string
+      offer:
+        $ref: '#/definitions/domain.OfferDTO'
+      organizer:
+        $ref: '#/definitions/domain.OrganizationDTO'
+      performer:
+        $ref: '#/definitions/domain.OrganizationDTO'
+      provider:
+        type: string
+      start_date:
+        type: string
+      type:
+        description: '"Event"'
+        type: string
+      url:
+        type: string
+    required:
+    - location
+    - name
+    - start_date
+    - type
+    type: object
+  domain.Location:
+    properties:
+      address:
+        $ref: '#/definitions/domain.Address'
+      name:
+        type: string
+      type:
+        type: string
+    type: object
+  domain.LocationDTO:
+    properties:
+      address:
+        $ref: '#/definitions/domain.AddressDTO'
+      name:
+        type: string
+      type:
+        type: string
+    required:
+    - address
+    type: object
+  domain.Offer:
+    properties:
+      availability_type:
+        type: string
+      currency:
+        type: string
+      is_available:
+        type: boolean
+      price:
+        type: number
+      status_text:
+        type: string
+      type:
+        type: string
+      url:
+        type: string
+    type: object
+  domain.OfferDTO:
+    properties:
+      currency:
+        type: string
+      is_available:
+        type: boolean
       price:
         minimum: 0
         type: number
-      start_time:
-        example: "2024-07-20T22:00:00Z"
+      type:
+        type: string
+      url:
+        type: string
+    type: object
+  domain.Organization:
+    properties:
+      address:
+        $ref: '#/definitions/domain.Address'
+      name:
         type: string
       type:
-        allOf:
-        - $ref: '#/definitions/domain.EventType'
-        example: concert
-    required:
-    - city
-    - event_name
-    - start_time
-    - type
+        type: string
+      url:
+        type: string
     type: object
-  domain.EventType:
-    enum:
-    - concert
-    - festival
-    - theater
-    - standup
-    - conference
-    - meetup
-    - other
-    type: string
-    x-enum-varnames:
-    - TypeConcert
-    - TypeFestival
-    - TypeTheater
-    - TypeStandUp
-    - TypeConference
-    - TypeMeetup
-    - TypeOther
+  domain.OrganizationDTO:
+    properties:
+      address:
+        $ref: '#/definitions/domain.AddressDTO'
+      name:
+        type: string
+      type:
+        type: string
+      url:
+        type: string
+    type: object
   domain.TrackingEvent:
     properties:
       action:
         type: string
-      createdAt:
+      created_at:
         type: string
       id:
         type: string
       payload:
         type: string
-      userAgent:
+      user_agent:
         type: string
-      userName:
+      user_name:
         type: string
     type: object
 host: 127.0.0.1:3000
@@ -137,14 +250,6 @@ paths:
         name: city
         type: string
       - description: Filter by Type
-        enum:
-        - concert
-        - festival
-        - theater
-        - standup
-        - conference
-        - meetup
-        - other
         in: query
         name: type
         type: string

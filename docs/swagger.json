@@ -38,15 +38,6 @@
                         "in": "query"
                     },
                     {
-                        "enum": [
-                            "concert",
-                            "festival",
-                            "theater",
-                            "standup",
-                            "conference",
-                            "meetup",
-                            "other"
-                        ],
                         "type": "string",
                         "description": "Filter by Type",
                         "name": "type",
@@ -623,6 +614,62 @@
                 }
             }
         },
+        "domain.Address": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "postal_code": {
+                    "type": "string"
+                },
+                "raw_address_string": {
+                    "type": "string"
+                },
+                "street": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.AddressDTO": {
+            "type": "object",
+            "required": [
+                "city"
+            ],
+            "properties": {
+                "city": {
+                    "description": "City is usually required",
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "postal_code": {
+                    "type": "string"
+                },
+                "raw_address_string": {
+                    "type": "string"
+                },
+                "street": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.BatchEventRequest": {
             "type": "object",
             "required": [
@@ -642,125 +689,246 @@
         "domain.Event": {
             "type": "object",
             "properties": {
-                "city": {
+                "article_body": {
                     "type": "string"
                 },
-                "country": {
+                "attendance_mode": {
                     "type": "string"
                 },
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
-                "endTime": {
+                "date_published": {
                     "type": "string"
                 },
-                "eventName": {
+                "description": {
                     "type": "string"
                 },
-                "eventURL": {
+                "end_date": {
                     "type": "string"
                 },
-                "fullAddress": {
+                "event_status": {
                     "type": "string"
-                },
-                "hasTickets": {
-                    "type": "boolean"
                 },
                 "id": {
                     "type": "string"
                 },
-                "imageUrl": {
+                "image_url": {
                     "type": "string"
                 },
-                "latitude": {
+                "keywords": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "location": {
+                    "$ref": "#/definitions/domain.Location"
+                },
+                "name": {
                     "type": "string"
                 },
-                "longitude": {
-                    "type": "string"
+                "offer": {
+                    "$ref": "#/definitions/domain.Offer"
                 },
-                "organizerName": {
-                    "type": "string"
+                "organizer": {
+                    "$ref": "#/definitions/domain.Organization"
                 },
-                "price": {
-                    "type": "number"
+                "performer": {
+                    "$ref": "#/definitions/domain.Organization"
                 },
                 "provider": {
                     "type": "string"
                 },
-                "startTime": {
-                    "type": "string"
-                },
-                "state": {
-                    "type": "string"
-                },
-                "street": {
-                    "type": "string"
-                },
-                "timezone": {
+                "start_date": {
                     "type": "string"
                 },
                 "type": {
-                    "$ref": "#/definitions/domain.EventType"
+                    "description": "\"Event\"",
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },
         "domain.EventDTO": {
             "type": "object",
             "required": [
-                "city",
-                "event_name",
-                "start_time",
+                "location",
+                "name",
+                "start_date",
                 "type"
             ],
             "properties": {
-                "city": {
+                "article_body": {
                     "type": "string"
                 },
-                "end_time": {
-                    "type": "string",
-                    "example": "2024-07-20T22:00:00Z"
-                },
-                "event_name": {
+                "attendance_mode": {
                     "type": "string"
+                },
+                "date_published": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "event_status": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "keywords": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "location": {
+                    "$ref": "#/definitions/domain.LocationDTO"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "offer": {
+                    "$ref": "#/definitions/domain.OfferDTO"
+                },
+                "organizer": {
+                    "$ref": "#/definitions/domain.OrganizationDTO"
+                },
+                "performer": {
+                    "$ref": "#/definitions/domain.OrganizationDTO"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "\"Event\"",
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.Location": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "$ref": "#/definitions/domain.Address"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.LocationDTO": {
+            "type": "object",
+            "required": [
+                "address"
+            ],
+            "properties": {
+                "address": {
+                    "$ref": "#/definitions/domain.AddressDTO"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.Offer": {
+            "type": "object",
+            "properties": {
+                "availability_type": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "is_available": {
+                    "type": "boolean"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "status_text": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.OfferDTO": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string"
+                },
+                "is_available": {
+                    "type": "boolean"
                 },
                 "price": {
                     "type": "number",
                     "minimum": 0
                 },
-                "start_time": {
-                    "type": "string",
-                    "example": "2024-07-20T22:00:00Z"
-                },
                 "type": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.EventType"
-                        }
-                    ],
-                    "example": "concert"
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },
-        "domain.EventType": {
-            "type": "string",
-            "enum": [
-                "concert",
-                "festival",
-                "theater",
-                "standup",
-                "conference",
-                "meetup",
-                "other"
-            ],
-            "x-enum-varnames": [
-                "TypeConcert",
-                "TypeFestival",
-                "TypeTheater",
-                "TypeStandUp",
-                "TypeConference",
-                "TypeMeetup",
-                "TypeOther"
-            ]
+        "domain.Organization": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "$ref": "#/definitions/domain.Address"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.OrganizationDTO": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "$ref": "#/definitions/domain.AddressDTO"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
         },
         "domain.TrackingEvent": {
             "type": "object",
@@ -768,7 +936,7 @@
                 "action": {
                     "type": "string"
                 },
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "id": {
@@ -777,10 +945,10 @@
                 "payload": {
                     "type": "string"
                 },
-                "userAgent": {
+                "user_agent": {
                     "type": "string"
                 },
-                "userName": {
+                "user_name": {
                     "type": "string"
                 }
             }

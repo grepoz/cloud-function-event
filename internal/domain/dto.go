@@ -52,8 +52,8 @@ type EventDTO struct {
 	Description    string           `json:"description"`
 	ArticleBody    string           `json:"article_body"`
 	Keywords       []string         `json:"keywords"`
-	StartDate      string           `json:"start_date" validate:"required,datetime=2006-01-02T15:04:05Z07:00"`
-	EndDate        *string          `json:"end_date" validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
+	StartDate      string           `json:"start_time" validate:"required,datetime=2006-01-02T15:04:05Z07:00" example:"2024-07-20T22:00:00Z"`
+	EndDate        *string          `json:"end_time" validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00" example:"2024-07-20T22:00:00Z"`
 	DatePublished  string           `json:"date_published"`
 	Url            string           `json:"url"`
 	ImageUrl       string           `json:"image_url"`

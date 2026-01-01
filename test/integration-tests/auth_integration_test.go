@@ -153,7 +153,27 @@ func TestAuth_Authenticated_Access(t *testing.T) {
 
 	t.Run("Allow_Admin_Write", func(t *testing.T) {
 		// Valid Event Payload
-		bodyStr := `{"name": "Auth Test Event", "city": "Warsaw", "type": "concert", "address": {"city": "Gdansk"}}, "location": {"address": {"city": "Gdansk"}}, "type": "concert", "offer": {"price": 50}, "start_date":"2024-12-31T20:00:00Z"}}`
+
+		bodyStr := `{
+			"name": "Auth Test Event",
+			"type": "concert",
+			"start_date": "2024-12-31T20:00:00Z",
+			"location": {
+				"address": {
+					"city": "Gdansk"
+				}
+			},
+			"performer": {
+				"name": "Test Performer",
+				"address": {
+					"city": "Gdansk"
+				}
+			},
+			"offer": {
+				"price": 50
+			}
+		}`
+
 		req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(bodyStr)))
 		req.Header.Set("Authorization", adminAuthHeader)
 		req.Header.Set("Content-Type", "application/json")
