@@ -69,7 +69,7 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 
 	validSorts := map[string]string{
 		"created_at":            "created_at",
-		"start_time":            "start_date",
+		"start_date":            "start_date",
 		"name":                  "name",
 		"location.address.city": "location.address.city",
 	}

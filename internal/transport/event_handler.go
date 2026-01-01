@@ -263,7 +263,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 // @Param end_date query string false "End Date (RFC3339)"
 // @Param page_size query int false "Page Size (1-100)"
 // @Param page_token query string false "Pagination Token"
-// @Param sort_key query string false "Sort Key (e.g. price, start_time)"
+// @Param sort_key query string false "Sort Key (e.g. price, start_date)"
 // @Param sort_dir query string false "Sort Direction (asc, desc)"
 // @Success 200 {object} domain.APIResponse{data=[]domain.Event}
 // @Router /events [get]
@@ -329,18 +329,18 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 
 	// 4. Convert DTO to Domain Request
 	// Time parsing is safe here because validation ensured the format is correct.
-	var startTime, endTime *time.Time
+	var startDate, endDate *time.Time
 
 	if dto.StartDate != "" {
 		t, _ := time.Parse(time.RFC3339, dto.StartDate)
-		startTime = &t
+		startDate = &t
 	}
 	if dto.EndDate != "" {
 		t, _ := time.Parse(time.RFC3339, dto.EndDate)
-		endTime = &t
+		endDate = &t
 	}
 
-	if startTime != nil && endTime != nil && endTime.Before(*startTime) {
+	if startDate != nil && endDate != nil && endDate.Before(*startDate) {
 		respondError(w, domain.ErrValidation("end_date cannot be before start_date"))
 		return
 	}
@@ -360,8 +360,8 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 			Type:      dto.Type,
 			MinPrice:  dto.MinPrice,
 			MaxPrice:  dto.MaxPrice,
-			StartDate: startTime,
-			EndDate:   endTime,
+			StartDate: startDate,
+			EndDate:   endDate,
 		},
 		Sorting: domain.SortRequest{
 			PageSize:      dto.PageSize,

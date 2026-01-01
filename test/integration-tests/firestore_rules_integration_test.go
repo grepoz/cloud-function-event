@@ -76,7 +76,7 @@ func tryWriteEvent(host, project, token string) error {
 		"city": {"stringValue": "TestCity"},
 		"type": {"stringValue": "concert"},
 		"price": {"doubleValue": 10},
-		"start_time": {"timestampValue": "2025-01-01T10:00:00Z"}
+		"start_date": {"timestampValue": "2025-01-01T10:00:00Z"}
 	}}`
 
 	req, _ := http.NewRequest("POST", url, bytes.NewBufferString(body))

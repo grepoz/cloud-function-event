@@ -191,7 +191,7 @@ func TestAuth_Authenticated_Access(t *testing.T) {
 		regularToken := generateValidEmulatorToken("regular_user", TestProjectID)
 		regularHeader := "Bearer " + regularToken
 
-		bodyStr := `{"event_name": "Illegal Event", "city": "Nowhere", "type": "concert", "price": 0, "start_time": "2024-12-31T20:00:00Z"}`
+		bodyStr := `{"event_name": "Illegal Event", "city": "Nowhere", "type": "concert", "price": 0, "start_date": "2024-12-31T20:00:00Z"}`
 		req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(bodyStr)))
 		req.Header.Set("Authorization", regularHeader)
 		req.Header.Set("Content-Type", "application/json")

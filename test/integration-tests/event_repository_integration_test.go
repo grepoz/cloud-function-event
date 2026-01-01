@@ -39,9 +39,9 @@ func TestEventRepository_List_MultipleFilters_RoughMatch(t *testing.T) {
 			// Match
 			batch.Set(client.Collection("events").NewDoc(), &domain.Event{
 				Id:        fmt.Sprintf("match_%d", i),
-				Name:      "Match",                  // Fixed: Was EventName
-				Offer:     domain.Offer{Price: 100}, // Fixed: Was Price
-				StartDate: baseTime.Add(time.Hour),  // Fixed: Was StartTime
+				Name:      "Match",
+				Offer:     domain.Offer{Price: 100},
+				StartDate: baseTime.Add(time.Hour),
 				CreatedAt: time.Now(),
 			})
 			// Fail Price

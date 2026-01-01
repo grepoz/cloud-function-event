@@ -52,8 +52,8 @@ type EventDTO struct {
 	Description    string           `json:"description"`
 	ArticleBody    string           `json:"article_body"`
 	Keywords       []string         `json:"keywords"`
-	StartDate      string           `json:"start_time" validate:"required,datetime=2006-01-02T15:04:05Z07:00" example:"2024-07-20T22:00:00Z"`
-	EndDate        *string          `json:"end_time" validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00" example:"2024-07-20T22:00:00Z"`
+	StartDate      string           `json:"start_date" validate:"required,datetime=2006-01-02T15:04:05Z07:00" example:"2024-07-20T22:00:00Z"`
+	EndDate        *string          `json:"end_date" validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00" example:"2024-07-20T22:00:00Z"`
 	DatePublished  string           `json:"date_published"`
 	Url            string           `json:"url"`
 	ImageUrl       string           `json:"image_url"`
@@ -71,7 +71,7 @@ type EventListDTO struct {
 	PageSize  int    `validate:"gte=1,lte=100"`
 	PageToken string `validate:"omitempty,base64"`
 	SortDir   string `validate:"omitempty,oneof=asc desc"`
-	SortKey   string `validate:"omitempty,oneof=name location.address.city start_time created_at"` // Updated sort keys
+	SortKey   string `validate:"omitempty,oneof=name location.address.city start_date created_at"` // Updated sort keys
 
 	MinPrice *float64 `validate:"omitempty,gte=0"`
 	MaxPrice *float64 `validate:"omitempty,gte=0"`
@@ -116,21 +116,21 @@ type TrackingEventDTO struct {
 }
 
 func EventDTOToModel(dto *EventDTO) (*Event, error) {
-	startTime, err := time.Parse(time.RFC3339, dto.StartDate)
+	startDate, err := time.Parse(time.RFC3339, dto.StartDate)
 	if err != nil {
 		return nil, fmt.Errorf("invalid start_date format: %w", err)
 	}
 
-	var endTime *time.Time
+	var endDate *time.Time
 	if dto.EndDate != nil && *dto.EndDate != "" {
 		t, err := time.Parse(time.RFC3339, *dto.EndDate)
 		if err != nil {
 			return nil, fmt.Errorf("invalid end_date format: %w", err)
 		}
-		if t.Before(startTime) {
+		if t.Before(startDate) {
 			return nil, fmt.Errorf("end_date cannot be before start_date")
 		}
-		endTime = &t
+		endDate = &t
 	}
 
 	var pubTime time.Time
@@ -168,8 +168,8 @@ func EventDTOToModel(dto *EventDTO) (*Event, error) {
 		Description:    dto.Description,
 		ArticleBody:    dto.ArticleBody,
 		Keywords:       dto.Keywords,
-		StartDate:      startTime,
-		EndDate:        endTime,
+		StartDate:      startDate,
+		EndDate:        endDate,
 		DatePublished:  pubTime,
 		Url:            dto.Url,
 		ImageUrl:       dto.ImageUrl,
