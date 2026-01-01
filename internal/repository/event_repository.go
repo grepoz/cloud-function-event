@@ -1,13 +1,14 @@
 package repository
 
 import (
-	"bibently.com/backend/internal/domain"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
+
+	"bibently.com/backend/internal/domain"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
@@ -66,9 +67,11 @@ func (r *eventRepo) Save(ctx context.Context, event *domain.Event) error {
 
 func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]domain.Event, string, error) {
 
-	validSorts := map[string]bool{
-		"created_at": true, "price": true, "start_time": true,
-		"event_name": true, "city": true, "end_time": true,
+	validSorts := map[string]string{
+		"created_at":            "created_at",
+		"start_time":            "start_date",
+		"name":                  "name",
+		"location.address.city": "location.address.city",
 	}
 
 	f := search.Filters
@@ -80,21 +83,16 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	var inequalityFields []string
 
 	// Prefix matches (>= and <=) count as inequalities
-	if f.EventName != "" {
-		inequalityFields = append(inequalityFields, "event_name")
+	if f.Name != "" {
+		inequalityFields = append(inequalityFields, "name")
 	}
 	if f.City != "" {
-		inequalityFields = append(inequalityFields, "city")
-	}
-	// Numeric and Date ranges
-	if f.MinPrice != nil || f.MaxPrice != nil {
-		inequalityFields = append(inequalityFields, "price")
+		inequalityFields = append(inequalityFields, "location.address.city")
 	}
 	if f.StartDate != nil || f.EndDate != nil {
-		inequalityFields = append(inequalityFields, "start_time")
+		inequalityFields = append(inequalityFields, "start_date")
 	}
 
-	// 2. Build Sort Order
 	var sortFields []string
 
 	// A. Add all inequality fields to sort first (Critical for Firestore logic)
@@ -102,29 +100,26 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		sortFields = append(sortFields, field)
 	}
 
-	// B. Add User's requested sort (if not already added via inequality)
-	if reqSort != "" && validSorts[reqSort] {
-		isDuplicate := false
-		for _, existing := range sortFields {
-			if existing == reqSort {
-				isDuplicate = true
-				break
+	if reqSort != "" {
+		if dbField, ok := validSorts[reqSort]; ok {
+			isDuplicate := false
+			for _, existing := range sortFields {
+				if existing == dbField {
+					isDuplicate = true
+					break
+				}
 			}
-		}
-		if !isDuplicate {
-			sortFields = append(sortFields, reqSort)
+			if !isDuplicate {
+				sortFields = append(sortFields, dbField)
+			}
 		}
 	}
 
-	// C. Fallback: If no sorts yet, default to created_at
 	if len(sortFields) == 0 {
 		sortFields = append(sortFields, "created_at")
 	}
-
-	// D. Always tie-break with ID for stable pagination
 	sortFields = append(sortFields, "id")
 
-	// 3. Build Query (Apply Sorts)
 	coll := r.client.Collection(CollectionEvents)
 	var q firestore.Query
 
@@ -134,7 +129,6 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	}
 
 	for i, field := range sortFields {
-		// Calculate direction for this specific field
 		dir := direction
 		if field == "id" {
 			dir = firestore.Asc // ID is always Ascending for stability
@@ -149,32 +143,29 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		}
 	}
 
-	// 4. Apply Filters
 	lastUtf8Char := "\uf8ff"
 
-	if f.EventName != "" {
-		q = q.Where("event_name", ">=", f.EventName).Where("event_name", "<=", f.EventName+lastUtf8Char)
+	if f.Name != "" {
+		q = q.Where("name", ">=", f.Name).Where("name", "<=", f.Name+lastUtf8Char)
 	}
 	if f.City != "" {
-		q = q.Where("city", ">=", f.City).Where("city", "<=", f.City+lastUtf8Char)
-	}
-	if f.Type != "" {
-		q = q.Where("type", "==", f.Type)
-	}
-	if f.MinPrice != nil {
-		q = q.Where("price", ">=", *f.MinPrice)
-	}
-	if f.MaxPrice != nil {
-		q = q.Where("price", "<=", *f.MaxPrice)
+		// Note: Requires composite index on location.address.city if combined with other fields
+		q = q.Where("location.address.city", ">=", f.City).Where("location.address.city", "<=", f.City+lastUtf8Char)
 	}
 	if f.StartDate != nil {
-		q = q.Where("start_time", ">=", *f.StartDate)
+		q = q.Where("start_date", ">=", *f.StartDate)
 	}
 	if f.EndDate != nil {
-		q = q.Where("end_time", "<=", *f.EndDate)
+		q = q.Where("end_date", "<=", *f.EndDate)
 	}
 
-	// 5. Pagination Limit
+	if f.MinPrice != nil {
+		q = q.Where("offer.price", ">=", *f.MinPrice)
+	}
+	if f.MaxPrice != nil {
+		q = q.Where("offer.price", "<=", *f.MaxPrice)
+	}
+
 	limit := search.Sorting.PageSize
 	if limit <= 0 {
 		limit = 20
@@ -184,22 +175,19 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	}
 	q = q.Limit(limit)
 
-	// 6. Handle Page Token (Cursor)
 	if search.Sorting.PageToken != "" {
 		cursorVals, err := decodeCursor(search.Sorting.PageToken)
 		if err != nil {
 			return nil, "", fmt.Errorf("invalid page token")
 		}
 
-		// Safety Check: Cursor length must match the number of OrderBy fields
 		if len(cursorVals) != len(sortFields) {
 			return nil, "", fmt.Errorf("cursor mismatch: sorting criteria changed")
 		}
 
-		// Correctly parse time strings based on the field type in that position
 		for i, field := range sortFields {
 			switch field {
-			case "created_at", "start_time", "end_time":
+			case "created_at", "start_date", "end_date":
 				if strVal, ok := cursorVals[i].(string); ok {
 					t, err := time.Parse(time.RFC3339, strVal)
 					if err == nil {
@@ -212,7 +200,6 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		q = q.StartAfter(cursorVals...)
 	}
 
-	// 7. Execute Query
 	iter := q.Documents(ctx)
 	defer iter.Stop()
 
@@ -234,7 +221,6 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 		events = append(events, e)
 	}
 
-	// 8. Generate Next Page Token
 	nextToken := ""
 	if len(events) == limit {
 		lastEvent := events[len(events)-1]
@@ -282,19 +268,17 @@ func (r *eventRepo) BatchSave(ctx context.Context, events []*domain.Event) error
 func getSortValue(e *domain.Event, key string) interface{} {
 	switch key {
 	case "price":
-		return e.Price
-	case "start_time":
-		return e.StartTime
-	case "end_time":
-		return e.EndTime
-	case "city":
-		return e.City
-	case "type":
-		return e.Type
+		return e.Offer.Price
+	case "start_date":
+		return e.StartDate
+	case "enddate":
+		return e.EndDate
+	case "location.address.city":
+		return e.Location.Address.City
 	case "created_at":
 		return e.CreatedAt
-	case "event_name":
-		return e.EventName
+	case "name":
+		return e.Name
 	default:
 		return e.CreatedAt
 	}

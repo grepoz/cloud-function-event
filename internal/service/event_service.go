@@ -1,10 +1,11 @@
 package service
 
 import (
-	"bibently.com/backend/internal/domain"
-	"bibently.com/backend/internal/repository"
 	"context"
 	"time"
+
+	"bibently.com/backend/internal/domain"
+	"bibently.com/backend/internal/repository"
 
 	"github.com/google/uuid"
 )
@@ -33,7 +34,7 @@ func (s *eventService) CreateEvent(ctx context.Context, event *domain.Event) err
 	if event.CreatedAt.IsZero() {
 		event.CreatedAt = time.Now().UTC()
 	}
-	if event.EventName == "" {
+	if event.Name == "" {
 		return domain.ErrValidation("event name is required")
 	}
 	return s.repo.Save(ctx, event)
@@ -87,7 +88,7 @@ func (s *eventService) BatchCreateEvents(ctx context.Context, events []*domain.E
 		if event.CreatedAt.IsZero() {
 			event.CreatedAt = now
 		}
-		if event.EventName == "" {
+		if event.Name == "" {
 			return domain.ErrValidation("event name is required for all items")
 		}
 	}

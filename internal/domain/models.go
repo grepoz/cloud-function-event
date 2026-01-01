@@ -4,61 +4,74 @@ import (
 	"time"
 )
 
-type EventType string
-
-const (
-	TypeConcert    EventType = "concert"
-	TypeFestival   EventType = "festival"
-	TypeTheater    EventType = "theater"
-	TypeStandUp    EventType = "standup"
-	TypeConference EventType = "conference"
-	TypeMeetup     EventType = "meetup"
-	TypeOther      EventType = "other"
-)
-
-// AllEventTypes is a registry of all allowed event types
-var AllEventTypes = []EventType{
-	TypeConcert,
-	TypeFestival,
-	TypeTheater,
-	TypeStandUp,
-	TypeConference,
-	TypeMeetup,
-	TypeOther,
+// Address matches the nested address object in JSON
+type Address struct {
+	Type             string `firestore:"type" json:"type"`
+	Name             string `firestore:"name" json:"name"`
+	Street           string `firestore:"street" json:"street"`
+	City             string `firestore:"city" json:"city"`
+	Country          string `firestore:"country" json:"country"`
+	PostalCode       string `firestore:"postal_code" json:"postal_code"`
+	RawAddressString string `firestore:"raw_address_string" json:"raw_address_string"`
 }
 
-// Event represents the database entity and the DTO
+// Location matches the location object
+type Location struct {
+	Type    string  `firestore:"type" json:"type"`
+	Name    string  `firestore:"name" json:"name"`
+	Address Address `firestore:"address" json:"address"`
+}
+
+// Organization matches performer/organizer
+type Organization struct {
+	Type    string  `firestore:"type" json:"type"`
+	Name    string  `firestore:"name" json:"name"`
+	Url     string  `firestore:"url" json:"url"`
+	Address Address `firestore:"address" json:"address"`
+}
+
+// Offer matches the offer item
+type Offer struct {
+	Type             string  `firestore:"type" json:"type"`
+	Price            float64 `firestore:"price" json:"price"`
+	Currency         string  `firestore:"currency" json:"currency"`
+	Url              string  `firestore:"url" json:"url"`
+	IsAvailable      bool    `firestore:"is_available" json:"is_available"`
+	StatusText       string  `firestore:"status_text" json:"status_text"`
+	AvailabilityType string  `firestore:"availability_type" json:"availability_type"`
+}
+
+// Event structure updated to match events-tricity.json
 type Event struct {
-	Id            string    `firestore:"id"`
-	OrganizerName string    `firestore:"organizer_name"`
-	EventName     string    `firestore:"event_name"`
-	HasTickets    bool      `firestore:"has_tickets"`
-	City          string    `firestore:"city"`
-	Country       string    `firestore:"country"`
-	FullAddress   string    `firestore:"full_address"`
-	Latitude      string    `firestore:"latitude"`
-	Longitude     string    `firestore:"longitude"`
-	State         string    `firestore:"state"`
-	Street        string    `firestore:"street"`
-	StartTime     time.Time `firestore:"start_time"`
-	EndTime       time.Time `firestore:"end_time"`
-	Timezone      string    `firestore:"timezone"`
-	EventURL      string    `firestore:"event_url"`
-	Provider      string    `firestore:"provider"`
-	Price         float64   `firestore:"price"`
-	ImageUrl      string    `firestore:"image_url"`
-	Type          EventType `firestore:"type"`
-	CreatedAt     time.Time `firestore:"created_at"`
+	Id             string        `firestore:"id" json:"id"`
+	Type           string        `firestore:"type" json:"type"` // "Event"
+	Name           string        `firestore:"name" json:"name"`
+	Description    string        `firestore:"description" json:"description"`
+	ArticleBody    string        `firestore:"article_body" json:"article_body"`
+	Keywords       []string      `firestore:"keywords" json:"keywords"`
+	StartDate      time.Time     `firestore:"start_date" json:"start_date"`
+	EndDate        *time.Time    `firestore:"end_date" json:"end_date"`
+	DatePublished  time.Time     `firestore:"date_published" json:"date_published"`
+	Url            string        `firestore:"url" json:"url"`
+	ImageUrl       string        `firestore:"image_url" json:"image_url"`
+	EventStatus    string        `firestore:"event_status" json:"event_status"`
+	AttendanceMode string        `firestore:"attendance_mode" json:"attendance_mode"`
+	Location       Location      `firestore:"location" json:"location"`
+	Performer      Organization  `firestore:"performer" json:"performer"`
+	Organizer      *Organization `firestore:"organizer" json:"organizer"`
+	Offer          Offer         `firestore:"offer" json:"offer"`
+	Provider       string        `firestore:"provider" json:"provider"`
+	CreatedAt      time.Time     `firestore:"created_at" json:"created_at"`
 }
 
-// TrackingEvent represents an analytics or tracking action
+// TrackingEvent remains unchanged
 type TrackingEvent struct {
-	Id        string    `firestore:"id"`
-	Action    string    `firestore:"action"`
-	UserName  string    `firestore:"user_name"`
-	Payload   string    `firestore:"payload"`
-	UserAgent string    `firestore:"user_agent"`
-	CreatedAt time.Time `firestore:"created_at"`
+	Id        string    `firestore:"id" json:"id"`
+	Action    string    `firestore:"action" json:"action"`
+	UserName  string    `firestore:"user_name" json:"user_name"`
+	Payload   string    `firestore:"payload" json:"payload"`
+	UserAgent string    `firestore:"user_agent" json:"user_agent"`
+	CreatedAt time.Time `firestore:"created_at" json:"created_at"`
 }
 
 // SearchRequest - helper structure for filters
@@ -69,12 +82,12 @@ type SearchRequest struct {
 
 type FilterRequest struct {
 	City      string
-	EventName string
+	Name      string
 	StartDate *time.Time
 	EndDate   *time.Time
 	MinPrice  *float64
 	MaxPrice  *float64
-	Type      EventType
+	Type      string
 }
 
 type SortRequest struct {
@@ -97,13 +110,4 @@ type APIPaginationResponse struct {
 	Data  interface{} `json:"data,omitempty"`
 	Error string      `json:"error,omitempty"`
 	Meta  *Meta       `json:"meta,omitempty"`
-}
-
-func (e EventType) IsValid() bool {
-	for _, valid := range AllEventTypes {
-		if e == valid {
-			return true
-		}
-	}
-	return false
 }

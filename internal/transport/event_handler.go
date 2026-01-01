@@ -155,25 +155,25 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	// Only fields that were actually present (non-nil) are added.
 	updates := make(map[string]interface{})
 
-	if dto.EventName != nil {
-		updates["event_name"] = *dto.EventName
+	if dto.Name != nil {
+		updates["event_name"] = dto.Name
 	}
-	if dto.City != nil {
-		updates["city"] = *dto.City
+	if dto.Location.Address.City != nil {
+		updates["city"] = *dto.Location.Address.City
 	}
-	if dto.Price != nil {
-		updates["price"] = *dto.Price
+	if dto.Offer.Price != nil {
+		updates["price"] = *dto.Offer.Price
 	}
 	if dto.Type != nil {
 		updates["type"] = *dto.Type
 	}
-	if dto.StartTime != nil {
+	if dto.StartDate != nil {
 		// We already validated the format in the DTO, so parsing is safe
-		t, _ := time.Parse(time.RFC3339, *dto.StartTime)
+		t, _ := time.Parse(time.RFC3339, *dto.StartDate)
 		updates["start_time"] = t
 	}
-	if dto.EndTime != nil {
-		t, _ := time.Parse(time.RFC3339, *dto.EndTime)
+	if dto.EndDate != nil {
+		t, _ := time.Parse(time.RFC3339, *dto.EndDate)
 		updates["end_time"] = t
 	}
 
@@ -225,7 +225,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		StartDate: q.Get("start_date"),
 		EndDate:   q.Get("end_date"),
 		City:      q.Get("city"),
-		EventName: q.Get("event_name"),
+		Name:      q.Get("name"),
 		Type:      q.Get("type"),
 	}
 
@@ -302,8 +302,8 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	searchReq := domain.SearchRequest{
 		Filters: domain.FilterRequest{
 			City:      dto.City,
-			EventName: dto.EventName,
-			Type:      domain.EventType(dto.Type), // Safe cast due to validation
+			Name:      dto.Name,
+			Type:      dto.Type,
 			MinPrice:  dto.MinPrice,
 			MaxPrice:  dto.MaxPrice,
 			StartDate: startTime,
