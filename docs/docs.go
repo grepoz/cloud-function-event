@@ -77,6 +77,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Comma-separated Keywords",
+                        "name": "keywords",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page Size (1-100)",
                         "name": "page_size",
@@ -90,7 +96,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Sort Key (e.g. price, start_time)",
+                        "description": "Sort Key (e.g. price, start_date)",
                         "name": "sort_key",
                         "in": "query"
                     },
@@ -783,7 +789,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "end_date": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2024-07-20T22:00:00Z"
                 },
                 "event_status": {
                     "type": "string"
@@ -816,7 +823,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "start_date": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2024-07-20T22:00:00Z"
                 },
                 "type": {
                     "description": "\"Event\"",

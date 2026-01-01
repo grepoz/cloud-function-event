@@ -68,6 +68,12 @@
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Comma-separated Keywords",
+                        "name": "keywords",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page Size (1-100)",
                         "name": "page_size",
@@ -81,7 +87,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "Sort Key (e.g. price, start_time)",
+                        "description": "Sort Key (e.g. price, start_date)",
                         "name": "sort_key",
                         "in": "query"
                     },
@@ -774,7 +780,8 @@
                     "type": "string"
                 },
                 "end_date": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2024-07-20T22:00:00Z"
                 },
                 "event_status": {
                     "type": "string"
@@ -807,7 +814,8 @@
                     "type": "string"
                 },
                 "start_date": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2024-07-20T22:00:00Z"
                 },
                 "type": {
                     "description": "\"Event\"",

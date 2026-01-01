@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"bibently.com/backend/internal/domain"
@@ -261,6 +262,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 // @Param max_price query number false "Maximum Price"
 // @Param start_date query string false "Start Date (RFC3339)"
 // @Param end_date query string false "End Date (RFC3339)"
+// @Param keywords query string false "Comma-separated Keywords"
 // @Param page_size query int false "Page Size (1-100)"
 // @Param page_token query string false "Pagination Token"
 // @Param sort_key query string false "Sort Key (e.g. price, start_date)"
@@ -281,6 +283,10 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		City:      q.Get("city"),
 		Name:      q.Get("name"),
 		Type:      q.Get("type"),
+	}
+
+	if val := q.Get("keywords"); val != "" {
+		dto.Keywords = strings.Split(val, ",")
 	}
 
 	// Safe Parsing: PageSize

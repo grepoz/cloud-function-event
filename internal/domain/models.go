@@ -88,6 +88,7 @@ type FilterRequest struct {
 	MinPrice  *float64
 	MaxPrice  *float64
 	Type      string
+	Keywords  []string
 }
 
 type SortRequest struct {

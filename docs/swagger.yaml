@@ -109,6 +109,7 @@ definitions:
       description:
         type: string
       end_date:
+        example: "2024-07-20T22:00:00Z"
         type: string
       event_status:
         type: string
@@ -131,6 +132,7 @@ definitions:
       provider:
         type: string
       start_date:
+        example: "2024-07-20T22:00:00Z"
         type: string
       type:
         description: '"Event"'
@@ -269,6 +271,10 @@ paths:
         in: query
         name: end_date
         type: string
+      - description: Comma-separated Keywords
+        in: query
+        name: keywords
+        type: string
       - description: Page Size (1-100)
         in: query
         name: page_size
@@ -277,7 +283,7 @@ paths:
         in: query
         name: page_token
         type: string
-      - description: Sort Key (e.g. price, start_time)
+      - description: Sort Key (e.g. price, start_date)
         in: query
         name: sort_key
         type: string

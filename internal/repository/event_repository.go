@@ -148,6 +148,9 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	if f.Name != "" {
 		q = q.Where("name", ">=", f.Name).Where("name", "<=", f.Name+lastUtf8Char)
 	}
+	if len(f.Keywords) > 0 {
+		q = q.Where("keywords", "array-contains-any", f.Keywords)
+	}
 	if f.Type != "" {
 		q = q.Where("type", "==", f.Type)
 	}

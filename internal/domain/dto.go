@@ -71,7 +71,7 @@ type EventListDTO struct {
 	PageSize  int    `validate:"gte=1,lte=100"`
 	PageToken string `validate:"omitempty,base64"`
 	SortDir   string `validate:"omitempty,oneof=asc desc"`
-	SortKey   string `validate:"omitempty,oneof=name location.address.city start_date created_at"` // Updated sort keys
+	SortKey   string `validate:"omitempty,oneof=name location.address.city start_date created_at"`
 
 	MinPrice *float64 `validate:"omitempty,gte=0"`
 	MaxPrice *float64 `validate:"omitempty,gte=0"`
@@ -79,9 +79,10 @@ type EventListDTO struct {
 	StartDate string `validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
 	EndDate   string `validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
 
-	City string `validate:"omitempty,max=50"`
-	Name string `validate:"omitempty,max=100"` // Was EventName
-	Type string `validate:"omitempty"`
+	City     string   `validate:"omitempty,max=50"`
+	Name     string   `validate:"omitempty,max=100"`
+	Type     string   `validate:"omitempty"`
+	Keywords []string `validate:"omitempty,max=10,dive,max=30"`
 }
 
 type UpdateEventDTO struct {

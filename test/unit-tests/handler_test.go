@@ -85,12 +85,20 @@ func TestHandler_ListEvents_QueryParams(t *testing.T) {
 			if req.Filters.MinPrice == nil || *req.Filters.MinPrice != 50.5 {
 				t.Errorf("Expected MinPrice 50.5, got %v", req.Filters.MinPrice)
 			}
+			if len(req.Filters.Keywords) != 2 {
+				t.Errorf("Expected 2 keywords, got %d", len(req.Filters.Keywords))
+			}
+			if req.Filters.Keywords[0] != "music" || req.Filters.Keywords[1] != "art" {
+				t.Errorf("Expected keywords [music, art], got %v", req.Filters.Keywords)
+			}
+
 			return []domain.Event{}, "", nil
 		},
 	}
 
 	router := transport.NewRouter(mockSvc, &MockTrackingService{})
-	req := httptest.NewRequest(http.MethodGet, "/events/?city=Warsaw", nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/events/?city=Warsaw&min_price=50.5&keywords=music,art", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 

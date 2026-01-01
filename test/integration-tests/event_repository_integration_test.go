@@ -110,3 +110,62 @@ func TestEventRepository_List_MultipleFilters_RoughMatch(t *testing.T) {
 		}
 	})
 }
+
+func TestEventRepository_List_Keywords(t *testing.T) {
+	withFirestore(t, func(t *testing.T, _ http.Handler, client *firestore.Client) {
+		repo := repository.NewEventRepository(client)
+		ctx := context.Background()
+
+		// 1. Seed Data
+		events := []*domain.Event{
+			{Id: "1", Name: "Rock Concert", Keywords: []string{"music", "rock", "loud"}, CreatedAt: time.Now()},
+			{Id: "2", Name: "Jazz Night", Keywords: []string{"music", "jazz", "chill"}, CreatedAt: time.Now()},
+			{Id: "3", Name: "Tech Talk", Keywords: []string{"education", "tech"}, CreatedAt: time.Now()},
+		}
+
+		for _, e := range events {
+			if _, err := client.Collection("events").Doc(e.Id).Set(ctx, e); err != nil {
+				t.Fatalf("Failed to seed event %s: %v", e.Id, err)
+			}
+		}
+
+		// 2. Test: Search for "rock" (Should find Event 1)
+		reqRock := domain.SearchRequest{
+			Filters: domain.FilterRequest{Keywords: []string{"rock"}},
+			Sorting: domain.SortRequest{PageSize: 10, SortKey: "created_at", SortDirection: "asc"},
+		}
+		res, _, err := repo.List(ctx, reqRock)
+		if err != nil {
+			t.Fatalf("List failed: %v", err)
+		}
+		if len(res) != 1 || res[0].Name != "Rock Concert" {
+			t.Errorf("Expected 'Rock Concert', got %v", res)
+		}
+
+		// 3. Test: Search for "music" (Should find Event 1 and 2)
+		reqMusic := domain.SearchRequest{
+			Filters: domain.FilterRequest{Keywords: []string{"music"}},
+			Sorting: domain.SortRequest{PageSize: 10, SortKey: "created_at", SortDirection: "asc"},
+		}
+		res, _, err = repo.List(ctx, reqMusic)
+		if err != nil {
+			t.Fatalf("List failed: %v", err)
+		}
+		if len(res) != 2 {
+			t.Errorf("Expected 2 music events, got %d", len(res))
+		}
+
+		// 4. Test: Search for "tech" OR "jazz" (Should find Event 2 and 3)
+		reqMix := domain.SearchRequest{
+			Filters: domain.FilterRequest{Keywords: []string{"tech", "jazz"}},
+			Sorting: domain.SortRequest{PageSize: 10, SortKey: "created_at", SortDirection: "asc"},
+		}
+		res, _, err = repo.List(ctx, reqMix)
+		if err != nil {
+			t.Fatalf("List failed: %v", err)
+		}
+		if len(res) != 2 {
+			t.Errorf("Expected 2 events (Jazz + Tech), got %d", len(res))
+		}
+	})
+}
