@@ -245,7 +245,7 @@ paths:
       parameters:
       - description: Filter by Event Name
         in: query
-        name: event_name
+        name: name
         type: string
       - description: Filter by City
         in: query

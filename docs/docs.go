@@ -37,7 +37,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Filter by Event Name",
-                        "name": "event_name",
+                        "name": "name",
                         "in": "query"
                     },
                     {

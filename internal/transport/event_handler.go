@@ -255,7 +255,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param event_name query string false "Filter by Event Name"
+// @Param name query string false "Filter by Event Name"
 // @Param city query string false "Filter by City"
 // @Param type query string false "Filter by Type"
 // @Param min_price query number false "Minimum Price"
@@ -368,6 +368,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 			MaxPrice:  dto.MaxPrice,
 			StartDate: startDate,
 			EndDate:   endDate,
+			Keywords:  dto.Keywords,
 		},
 		Sorting: domain.SortRequest{
 			PageSize:      dto.PageSize,

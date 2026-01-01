@@ -20,8 +20,7 @@ Content-Type: application/json
 
 {
   "organizer_name": "John Doe",
-  "event_name": "Rock Concert",
-  "city": "Warsaw",
+  "name": "Rock Concert",
   "price": 11.50,
   "type": "concert"
 }
@@ -40,8 +39,7 @@ Content-Type: application/json
 {
   "id": "{{event_id}}",
   "organizer_name": "Jane Smith",
-  "event_name": "Jazz Festival",
-  "city": "Chicago",
+  "name": "Jazz Festival",
   "price": 150.99,
   "type": "festival"
 }

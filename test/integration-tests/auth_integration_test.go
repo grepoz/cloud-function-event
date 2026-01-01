@@ -126,7 +126,7 @@ func TestAuth_Strict_Blocking(t *testing.T) {
 	})
 
 	t.Run("Block_Unauthenticated_Write", func(t *testing.T) {
-		body := bytes.NewReader([]byte(`{"event_name": "Hack"}`))
+		body := bytes.NewReader([]byte(`{"name": "Hack"}`))
 		req := httptest.NewRequest(http.MethodPost, "/events/", body)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
@@ -191,7 +191,7 @@ func TestAuth_Authenticated_Access(t *testing.T) {
 		regularToken := generateValidEmulatorToken("regular_user", TestProjectID)
 		regularHeader := "Bearer " + regularToken
 
-		bodyStr := `{"event_name": "Illegal Event", "city": "Nowhere", "type": "concert", "price": 0, "start_date": "2024-12-31T20:00:00Z"}`
+		bodyStr := `{"name": "Illegal Event", "city": "Nowhere", "type": "concert", "price": 0, "start_date": "2024-12-31T20:00:00Z"}`
 		req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(bodyStr)))
 		req.Header.Set("Authorization", regularHeader)
 		req.Header.Set("Content-Type", "application/json")
@@ -241,7 +241,7 @@ func TestAuth_Guest_Mode(t *testing.T) {
 	})
 
 	t.Run("Block_Guest_Write", func(t *testing.T) {
-		body := bytes.NewReader([]byte(`{"event_name": "Hack"}`))
+		body := bytes.NewReader([]byte(`{"name": "Hack"}`))
 		req := httptest.NewRequest(http.MethodPost, "/events/", body)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
