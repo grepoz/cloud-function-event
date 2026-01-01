@@ -1,10 +1,10 @@
 ### GET request to example server
-@host = localhost:3000
+@host = 127.0.0.1:3000/BibentlyFunctions
 @event_id = 4a761353-7eb4-4565-8491-7a4c6ee4404d
 
 ###  List all events
-GET https://{{host}}
-
+GET http://{{host}}
+Authorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJhdWQiOiJkb2NrZXItcHJvamVjdC1pZCIsImF1dGhfdGltZSI6MTc2NTkyMDYwMywiZW1haWwiOiJhZG1pbkBsb2NhbGhvc3QuY29tIiwiZXhwIjoxNzY1OTI0MjAzLCJpYXQiOjE3NjU5MjA2MDMsImlzcyI6Imh0dHBzOi8vc2VjdXJldG9rZW4uZ29vZ2xlLmNvbS9kb2NrZXItcHJvamVjdC1pZCIsInN1YiI6ImxvY2FsLWFkbWluLXVpZCIsInVzZXJfaWQiOiJsb2NhbC1hZG1pbi11aWQifQ.
 
 ### List events (GET)
 GET http://localhost:5000/?city=Warsaw&min_price=10.50&sort_dir=asc&page_size=5
