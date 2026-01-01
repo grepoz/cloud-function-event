@@ -1,13 +1,14 @@
 package integration_tests
 
 import (
-	"bibently.com/backend/internal/domain"
-	"bibently.com/backend/internal/repository"
 	"context"
 	"fmt"
 	"net/http"
 	"testing"
 	"time"
+
+	"bibently.com/backend/internal/domain"
+	"bibently.com/backend/internal/repository"
 
 	"cloud.google.com/go/firestore"
 )
@@ -15,7 +16,6 @@ import (
 func TestEventRepository_List_MultipleFilters_RoughMatch(t *testing.T) {
 	withFirestore(t, func(t *testing.T, _ http.Handler, client *firestore.Client) {
 		// 0. CLEANUP: Delete all existing events before seeding.
-		// This ensures we don't count leftover data from previous runs.
 		cleanupFirestore(t, client)
 
 		repo := repository.NewEventRepository(client)
@@ -39,33 +39,33 @@ func TestEventRepository_List_MultipleFilters_RoughMatch(t *testing.T) {
 			// Match
 			batch.Set(client.Collection("events").NewDoc(), &domain.Event{
 				Id:        fmt.Sprintf("match_%d", i),
-				EventName: "Match",
-				Price:     100,
-				StartTime: baseTime.Add(time.Hour),
+				Name:      "Match",                  // Fixed: Was EventName
+				Offer:     domain.Offer{Price: 100}, // Fixed: Was Price
+				StartDate: baseTime.Add(time.Hour),  // Fixed: Was StartTime
 				CreatedAt: time.Now(),
 			})
 			// Fail Price
 			batch.Set(client.Collection("events").NewDoc(), &domain.Event{
 				Id:        fmt.Sprintf("fail_price_%d", i),
-				EventName: "Fail Price",
-				Price:     10,
-				StartTime: baseTime.Add(time.Hour),
+				Name:      "Fail Price",
+				Offer:     domain.Offer{Price: 10},
+				StartDate: baseTime.Add(time.Hour),
 				CreatedAt: time.Now(),
 			})
 			// Fail Time
 			batch.Set(client.Collection("events").NewDoc(), &domain.Event{
 				Id:        fmt.Sprintf("fail_time_%d", i),
-				EventName: "Fail Time",
-				Price:     100,
-				StartTime: baseTime.Add(-24 * time.Hour),
+				Name:      "Fail Time",
+				Offer:     domain.Offer{Price: 100},
+				StartDate: baseTime.Add(-24 * time.Hour),
 				CreatedAt: time.Now(),
 			})
 			// Fail Both
 			batch.Set(client.Collection("events").NewDoc(), &domain.Event{
 				Id:        fmt.Sprintf("fail_both_%d", i),
-				EventName: "Fail Both",
-				Price:     10,
-				StartTime: baseTime.Add(-24 * time.Hour),
+				Name:      "Fail Both",
+				Offer:     domain.Offer{Price: 10},
+				StartDate: baseTime.Add(-24 * time.Hour),
 				CreatedAt: time.Now(),
 			})
 		}
@@ -76,13 +76,13 @@ func TestEventRepository_List_MultipleFilters_RoughMatch(t *testing.T) {
 		// 3. Define the Complex Query
 		req := domain.SearchRequest{
 			Filters: domain.FilterRequest{
-				MinPrice:  floatPtr(50),      // Should exclude 50 events
-				StartDate: timePtr(baseTime), // Should exclude 50 events (overlap)
+				MinPrice:  floatPtr(50),
+				StartDate: timePtr(baseTime),
 			},
 			Sorting: domain.SortRequest{
-				SortKey:       "created_at", // User Intent (Different from filters)
+				SortKey:       "created_at",
 				SortDirection: "asc",
-				PageSize:      100, // Request all possible matches
+				PageSize:      100,
 			},
 		}
 
@@ -101,7 +101,6 @@ func TestEventRepository_List_MultipleFilters_RoughMatch(t *testing.T) {
 		}
 
 		maxAllowed := expectedMatches
-
 		if count > maxAllowed {
 			t.Errorf("Too many results! Got %d. The secondary filter seems ineffective (Max allowed: %d).", count, maxAllowed)
 		} else if count > expectedMatches {

@@ -148,6 +148,9 @@ func (r *eventRepo) List(ctx context.Context, search domain.SearchRequest) ([]do
 	if f.Name != "" {
 		q = q.Where("name", ">=", f.Name).Where("name", "<=", f.Name+lastUtf8Char)
 	}
+	if f.Type != "" {
+		q = q.Where("type", "==", f.Type)
+	}
 	if f.City != "" {
 		// Note: Requires composite index on location.address.city if combined with other fields
 		q = q.Where("location.address.city", ">=", f.City).Where("location.address.city", "<=", f.City+lastUtf8Char)

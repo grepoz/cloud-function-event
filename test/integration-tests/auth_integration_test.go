@@ -1,9 +1,6 @@
 package integration_tests
 
 import (
-	"bibently.com/backend/internal/repository"
-	"bibently.com/backend/internal/service"
-	"bibently.com/backend/internal/transport"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -13,6 +10,10 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"bibently.com/backend/internal/repository"
+	"bibently.com/backend/internal/service"
+	"bibently.com/backend/internal/transport"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
@@ -152,7 +153,7 @@ func TestAuth_Authenticated_Access(t *testing.T) {
 
 	t.Run("Allow_Admin_Write", func(t *testing.T) {
 		// Valid Event Payload
-		bodyStr := `{"event_name": "Auth Test Event", "city": "Warsaw", "type": "concert", "price": 100, "start_time": "2024-12-31T20:00:00Z"}`
+		bodyStr := `{"name": "Auth Test Event", "city": "Warsaw", "type": "concert", "address": {"city": "Gdansk"}}, "location": {"address": {"city": "Gdansk"}}, "type": "concert", "offer": {"price": 50}, "start_date":"2024-12-31T20:00:00Z"}}`
 		req := httptest.NewRequest(http.MethodPost, "/events/", bytes.NewReader([]byte(bodyStr)))
 		req.Header.Set("Authorization", adminAuthHeader)
 		req.Header.Set("Content-Type", "application/json")

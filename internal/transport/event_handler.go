@@ -1,13 +1,14 @@
 package transport
 
 import (
-	"bibently.com/backend/internal/domain"
-	"bibently.com/backend/internal/service"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
+
+	"bibently.com/backend/internal/domain"
+	"bibently.com/backend/internal/service"
 )
 
 type EventHandler struct {
@@ -138,52 +139,105 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Decode into the strict DTO instead of a generic map
-	var dto domain.UpdateEventDTO
-	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		respondError(w, domain.ErrValidation("Invalid JSON body or type mismatch"))
+	// 1. Decode into a generic map to handle partial updates correctly.
+	// We cannot use UpdateEventDTO because it enforces 'required' fields and uses value types,
+	// preventing us from distinguishing between missing fields and zero values.
+	var rawUpdates map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&rawUpdates); err != nil {
+		respondError(w, domain.ErrValidation("Invalid JSON body"))
 		return
 	}
 
-	// 2. Validate the DTO (checks max length, number ranges, formats)
-	if err := domain.Validate.Struct(dto); err != nil {
-		respondError(w, domain.ErrValidation(err.Error()))
-		return
-	}
-
-	// 3. Convert validated DTO to a safe map for the repository
-	// Only fields that were actually present (non-nil) are added.
+	// 2. Map valid JSON fields to correct Firestore document structure
 	updates := make(map[string]interface{})
 
-	if dto.Name != nil {
-		updates["event_name"] = dto.Name
-	}
-	if dto.Location.Address.City != nil {
-		updates["city"] = *dto.Location.Address.City
-	}
-	if dto.Offer.Price != nil {
-		updates["price"] = *dto.Offer.Price
-	}
-	if dto.Type != nil {
-		updates["type"] = *dto.Type
-	}
-	if dto.StartDate != nil {
-		// We already validated the format in the DTO, so parsing is safe
-		t, _ := time.Parse(time.RFC3339, *dto.StartDate)
-		updates["start_time"] = t
-	}
-	if dto.EndDate != nil {
-		t, _ := time.Parse(time.RFC3339, *dto.EndDate)
-		updates["end_time"] = t
+	// Helper to extract string values
+	getString := func(key string) (string, bool) {
+		if v, ok := rawUpdates[key]; ok {
+			if s, ok := v.(string); ok {
+				return s, true
+			}
+		}
+		return "", false
 	}
 
-	// 4. Fail if the request contained no valid updatable fields
+	// Mapping: Name -> firestore:"name"
+	if name, ok := getString("name"); ok {
+		if name == "" {
+			respondError(w, domain.ErrValidation("name cannot be empty"))
+			return
+		}
+		updates["name"] = name
+	}
+
+	// Mapping: Type -> firestore:"type"
+	if t, ok := getString("type"); ok {
+		if t == "" {
+			respondError(w, domain.ErrValidation("type cannot be empty"))
+			return
+		}
+		updates["type"] = t
+	}
+
+	// Mapping: StartDate -> firestore:"start_date"
+	if s, ok := getString("start_date"); ok {
+		t, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			respondError(w, domain.ErrValidation("invalid start_date format"))
+			return
+		}
+		updates["start_date"] = t
+	}
+
+	// Mapping: EndDate -> firestore:"end_date"
+	if s, ok := getString("end_date"); ok {
+		t, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			respondError(w, domain.ErrValidation("invalid end_date format"))
+			return
+		}
+		updates["end_date"] = t
+	}
+
+	// Mapping: Location.Address.City -> firestore:"location" (nested)
+	// We assume client sends structure: {"location": {"address": {"city": "Value"}}}
+	// or potentially a flat alias if desired, but standardizing on JSON structure is safer.
+	// Here we check the nested path manually.
+	if loc, ok := rawUpdates["location"].(map[string]interface{}); ok {
+		if addr, ok := loc["address"].(map[string]interface{}); ok {
+			if city, ok := addr["city"].(string); ok && city != "" {
+				// To update a nested field using Set with MergeAll, we recreate the map structure.
+				// Note: This merges 'location' and 'address', it doesn't replace the whole object
+				// if the repository uses firestore.MergeAll.
+				updates["location"] = map[string]interface{}{
+					"address": map[string]interface{}{
+						"city": city,
+					},
+				}
+			}
+		}
+	}
+
+	// Mapping: Offer.Price -> firestore:"offer" (nested)
+	if offer, ok := rawUpdates["offer"].(map[string]interface{}); ok {
+		if price, ok := offer["price"].(float64); ok {
+			if price < 0 {
+				respondError(w, domain.ErrValidation("price cannot be negative"))
+				return
+			}
+			updates["offer"] = map[string]interface{}{
+				"price": price,
+			}
+		}
+	}
+
+	// 3. Fail if the request contained no valid updatable fields
 	if len(updates) == 0 {
 		respondError(w, domain.ErrValidation("No valid fields provided for update"))
 		return
 	}
 
-	// 5. Call Service
+	// 4. Call Service
 	if err := h.service.UpdateEvent(r.Context(), id, updates); err != nil {
 		respondError(w, err)
 		return
