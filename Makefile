@@ -31,7 +31,7 @@ rules:
 	    -e "s/{database}/$(FIRESTORE_DATABASE_ID)/g" firestore.rules.template > firestore.rules
 
 generate-fake-token:
-	go run ./cmd/generate_fake_auth_token_for_emulator.go
+	go run ./cmd/generate_token.go
 
 # start firestore emulator
 start-emulators: rules

@@ -49,13 +49,9 @@ func main() {
 }
 
 func createLocalAdminUser() {
-	// Give the server/emulator a split second to settle
-	time.Sleep(1 * time.Second)
-
 	ctx := context.Background()
 	adminUID := os.Getenv("FIRESTORE_ADMIN_UID")
 	if adminUID == "" {
-		log.Println("⚠️  Skipping local user creation: FIRESTORE_ADMIN_UID not set")
 		return
 	}
 
@@ -67,41 +63,51 @@ func createLocalAdminUser() {
 	conf := &firebase.Config{ProjectID: projectID}
 	app, err := firebase.NewApp(ctx, conf)
 	if err != nil {
-		log.Printf("⚠️  [Admin Setup] Failed to init firebase app: %v", err)
+		log.Printf("⚠️ [Admin Setup] Failed to init app: %v", err)
 		return
 	}
 
 	client, err := app.Auth(ctx)
 	if err != nil {
-		log.Printf("⚠️  [Admin Setup] Failed to get auth client: %v", err)
+		log.Printf("⚠️ [Admin Setup] Failed to get auth: %v", err)
 		return
 	}
 
-	// Attempt to create/get user
-	u, err := client.GetUser(ctx, adminUID)
-	if err == nil {
-		log.Printf("✅ [Admin Setup] User '%s' already exists (UID: %s)", u.DisplayName, adminUID)
-		return
+	maxRetries := 3
+	for i := 0; i < maxRetries; i++ {
+		_, err = client.GetUser(ctx, adminUID)
+		if err == nil {
+			log.Printf("✅ [Admin Setup] User already exists: %s", adminUID)
+			printToken(projectID, adminUID)
+			return
+		}
+
+		// If error is "user not found", we can proceed to create it
+		if auth.IsUserNotFound(err) {
+			break
+		}
+
+		// If connection refused, wait and retry
+		log.Printf("⏳ [Admin Setup] Waiting for Auth Emulator (attempt %d/%d)...", i+1, maxRetries)
+		time.Sleep(2 * time.Second)
 	}
 
 	params := (&auth.UserToCreate{}).
 		UID(adminUID).
 		Email("admin@localhost.com").
-		EmailVerified(true).
-		Password("admin123").
-		DisplayName("Local Admin")
+		Password("admin123")
 
 	if _, err := client.CreateUser(ctx, params); err != nil {
-		log.Printf("❌ [Admin Setup] Failed to create user (Emulator might be down): %v", err)
+		log.Printf("❌ [Admin Setup] Failed to create user: %v", err)
 	} else {
 		log.Printf("✅ [Admin Setup] Created user: %s", adminUID)
+		printToken(projectID, adminUID)
 	}
+}
 
-	// --- B. Generate & Print Token ---
-	// Call the refactored function from internal/auth
+func printToken(projectID, adminUID string) {
 	token := emulatorAuth.GenerateEmulatorToken(projectID, adminUID)
-
 	log.Println("---------------------------------------------------------")
-	log.Printf("🔑 ADMIN TOKEN (Copy to Swagger 'Authorize'):\nBearer %s", token)
+	log.Printf("🔑 ADMIN TOKEN:\nBearer %s", token)
 	log.Println("---------------------------------------------------------")
 }

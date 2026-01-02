@@ -1,21 +1,58 @@
 services:
+  firestore-rules-generator:
+    image: alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - FIRESTORE_ADMIN_UID=admin_user_xyz_123_secret_id
+      - FIRESTORE_DATABASE_ID=bibently-store
+    # This mirrors the logic in Makefile
+    command: sh -c "
+        sed -e \"s/YOUR_ADMIN_UID_HERE/$${FIRESTORE_ADMIN_UID}/g\" 
+        -e \"s/{database}/$${FIRESTORE_DATABASE_ID}/g\" 
+        firestore.rules.template > firestore.rules
+      "
+
+  firebase-emulators:
+    image: andreysenov/firebase-tools:latest
+    ports:
+      - "4000:4000" # Emulator UI
+      - "8080:8080" # Firestore
+      - "9099:9099" # Auth
+    volumes:
+      - .:/app # Matches the host directory to /app
+    working_dir: /app
+    depends_on:
+      firestore-rules-generator:
+        condition: service_completed_successfully
+    command: sh -c "firebase emulators:start --project local-project-id --only firestore,auth"
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "9099" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      - NODE_ENV=development
+
   bibently-functions:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      # You can access endpoints at http://127.0.0.1:3000/
       - "3000:3000"
+    depends_on:
+      - firebase-emulators
     environment:
       - PORT=3000
+      - FUNCTION_TARGET=BibentlyFunctions
       - LOCAL_ONLY=false
       - CORS_ALLOWED_ORIGIN=*
-      - GOOGLE_CLOUD_PROJECT=docker-project-id
-      - FIRESTORE_DATABASE_ID=docker-bibently-store
+      - GOOGLE_CLOUD_PROJECT=local-project-id
+      - FIRESTORE_DATABASE_ID=bibently-store
       - APP_ENV=development
-      - FIRESTORE_EMULATOR_HOST=host.docker.internal:8080
-      - FIREBASE_AUTH_EMULATOR_HOST=host.docker.internal:9099
-      - FIRESTORE_ADMIN_UID=local-admin-uid
-
+      - FIRESTORE_EMULATOR_HOST=firebase-emulators:8080
+      - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulators:9099
+      - FIRESTORE_ADMIN_UID=admin_user_xyz_123_secret_id
     volumes:
-       - .:/app
+      - .:/app
