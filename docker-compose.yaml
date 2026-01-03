@@ -7,7 +7,7 @@ services:
     environment:
       - FIRESTORE_ADMIN_UID=admin_user_xyz_123_secret_id
       - FIRESTORE_DATABASE_ID=bibently-store
-    # This mirrors the logic in Makefile
+    # This mirrors the logic in legacy.cmd.mk
     command: sh -c "
         sed -e \"s/YOUR_ADMIN_UID_HERE/$${FIRESTORE_ADMIN_UID}/g\" 
         -e \"s/{database}/$${FIRESTORE_DATABASE_ID}/g\" 

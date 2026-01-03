@@ -27,7 +27,7 @@
 --ingress-settings: all
 
 # --- Environment Variables ---
-# Note: It is often safer to keep ALL env vars in the Makefile to ensure
+# Note: It is often safer to keep ALL env vars in the legacy.cmd.mk to ensure
 # they merge correctly, but you can define static ones here.
 --update-env-vars:
   APP_ENV: production
