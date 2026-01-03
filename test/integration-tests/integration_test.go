@@ -16,13 +16,13 @@ import (
 	"bibently.com/backend/internal/repository"
 	"bibently.com/backend/internal/service"
 	"bibently.com/backend/internal/transport"
+	"github.com/rs/cors"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 )
 
 func setupIntegration(t *testing.T) (http.Handler, *firestore.Client) {
-
 	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {
 		t.Skip("Skipping integration test: FIRESTORE_EMULATOR_HOST not set")
 	}
@@ -40,9 +40,31 @@ func setupIntegration(t *testing.T) (http.Handler, *firestore.Client) {
 	eventSvc := service.NewEventService(eventRepo)
 	trackingSvc := service.NewTrackingService(trackingRepo)
 
+	// 1. Create the base router
 	router := transport.NewRouter(eventSvc, trackingSvc)
 
-	return router, client
+	// 2. Configure CORS (Match the logic in function.go)
+	corsOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
+	if corsOrigin == "" {
+		corsOrigin = "*"
+	}
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{corsOrigin},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization"},
+		MaxAge:           7200,
+		AllowCredentials: true,
+	})
+
+	// 3. Wrap the router in the middleware stack
+	var handler http.Handler = router
+
+	// Note: If you want to test Auth in integration, add WithAuthProtection here.
+	// For CORS tests, the CORS handler MUST be the outermost layer.
+	handler = c.Handler(handler)
+
+	return handler, client
 }
 
 func TestIntegration_Tracking(t *testing.T) {
