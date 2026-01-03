@@ -3,7 +3,6 @@ package transport
 import (
 	"context"
 	"net/http"
-	"os"
 	"strings"
 
 	"firebase.google.com/go/v4/auth"
@@ -15,7 +14,7 @@ type contextKey string
 // 2. Define the key constant. We export it so other packages in your app can read it.
 const UserContextKey contextKey = "user"
 
-func WithAuthProtection(next http.Handler, authClient *auth.Client) http.Handler {
+func WithAuthProtection(next http.Handler, authClient *auth.Client, adminUID string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		authHeader := r.Header.Get("Authorization")
@@ -33,7 +32,6 @@ func WithAuthProtection(next http.Handler, authClient *auth.Client) http.Handler
 
 		// 2. NOW check for Admin Role (Fix applied here)
 		// If it's a write operation (POST/PUT/DELETE), ensure the user is the Admin
-		adminUID := os.Getenv("FIRESTORE_ADMIN_UID")
 		if r.Method != http.MethodGet {
 			if !isAuthenticated || token.UID != adminUID {
 				http.Error(w, "Forbidden: Admins only", http.StatusForbidden)

@@ -54,7 +54,7 @@ deploy:
 	gcloud functions deploy bibently-functions \
 	--flags-file=deploy-config.yaml \
 	--service-account=$(FUNCTION_SERVICE_ACCOUNT) \
-	--update-env-vars=FIRESTORE_ADMIN_UID=$(FIRESTORE_ADMIN_UID),GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT)
+	--update-env-vars=GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT)
 
 deploy-firebase: rules
 	firebase deploy --only firestore

@@ -101,7 +101,7 @@ func setupAuthIntegration(t *testing.T) (http.Handler, *firestore.Client) {
 	trackingSvc := service.NewTrackingService(trackingRepo)
 
 	router := transport.NewRouter(eventSvc, trackingSvc)
-	protectedHandler := transport.WithAuthProtection(router, authClient)
+	protectedHandler := transport.WithAuthProtection(router, authClient, TestAdminUID)
 
 	return protectedHandler, client
 }

@@ -37,3 +37,9 @@ To deploy to Google Cloud:
 
 ```
 
+## GCP setup
+Service account have to has three required roles:
+- datastore.user
+- logging.logWriter
+- secretmanager.secretAccessor
+

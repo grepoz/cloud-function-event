@@ -2,6 +2,7 @@ package function
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,12 +14,14 @@ import (
 	"bibently.com/backend/internal/service"
 	"bibently.com/backend/internal/transport"
 
+	_ "bibently.com/backend/docs"
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/rs/cors"
 
-	_ "bibently.com/backend/docs"
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -54,6 +57,24 @@ func init() {
 func setupApplication() {
 	ctx := context.Background()
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+
+	adminUID := os.Getenv("FIRESTORE_ADMIN_UID")
+	if os.Getenv("APP_ENV") == "production" {
+		smClient, err := secretmanager.NewClient(ctx)
+		if err != nil {
+			log.Panicf("failed to create secretmanager client: %v", err)
+		}
+		defer smClient.Close()
+
+		secretPath := fmt.Sprintf("projects/%s/secrets/FIRESTORE_ADMIN_UID/versions/latest", projectID)
+		req := &secretmanagerpb.AccessSecretVersionRequest{Name: secretPath}
+		result, err := smClient.AccessSecretVersion(ctx, req)
+		if err != nil {
+			log.Panicf("failed to access secret version: %v", err)
+		}
+		adminUID = string(result.Payload.Data)
+	}
+
 	databaseId := os.Getenv("FIRESTORE_DATABASE_ID")
 
 	// 1. Initialize Firestore
@@ -122,7 +143,7 @@ func setupApplication() {
 
 	// 1. Base business logic
 	handler := transport.WithCompression(router)
-	handler = transport.WithAuthProtection(handler, authClient)
+	handler = transport.WithAuthProtection(handler, authClient, adminUID)
 	handler = transport.WithSecurityHeaders(handler, isProduction)
 
 	handler = corsHandler.Handler(handler)
