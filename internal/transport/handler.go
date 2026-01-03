@@ -1,8 +1,6 @@
 package transport
 
 import (
-	"bibently.com/backend/internal/domain"
-	"bibently.com/backend/internal/service"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,6 +8,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"bibently.com/backend/internal/domain"
+	"bibently.com/backend/internal/service"
 
 	"github.com/andybalholm/brotli"
 )
@@ -142,22 +143,6 @@ func respondError(w http.ResponseWriter, err error) {
 
 	w.WriteHeader(http.StatusInternalServerError)
 	_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: "Internal Server Error"})
-}
-
-func WithCORS(next http.Handler, origin string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if origin == "" {
-			origin = "*"
-		}
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
 }
 
 func WithCompression(next http.Handler) http.Handler {

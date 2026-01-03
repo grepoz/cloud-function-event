@@ -16,6 +16,7 @@ import (
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/rs/cors"
 
 	_ "bibently.com/backend/docs"
 
@@ -85,22 +86,48 @@ func setupApplication() {
 
 	// 4. Configuration & Middleware
 	corsOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
+	if corsOrigin == "" {
+		corsOrigin = "*"
+	}
 	isProduction := os.Getenv("APP_ENV") == "production"
 
 	// --- Middleware Chain (Order Matters) ---
 
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins: []string{corsOrigin},
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodDelete,
+			http.MethodOptions,
+		},
+		AllowedHeaders: []string{
+			"Accept",
+			"Content-Type",
+			"Content-Length",
+			"Accept-Encoding",
+			"X-CSRF-Token",
+			"Authorization",
+		},
+		// Instructs the browser to cache the preflight response for 2 hours (7200 seconds)
+		// This reduces latency and Cloud Function execution costs.
+		MaxAge: 7200,
+		// Set to true if your API needs to support cookies or HTTP authentication
+		AllowCredentials: true,
+		// Ensures preflight requests (OPTIONS) are terminated with 204 No Content
+		OptionsPassthrough: false,
+		Debug:              !isProduction,
+	})
+
 	// 1. Base business logic
 	handler := transport.WithCompression(router)
-
-	// 2. Auth & Security
 	handler = transport.WithAuthProtection(handler, authClient)
 	handler = transport.WithSecurityHeaders(handler, isProduction)
-	handler = transport.WithCORS(handler, corsOrigin)
 
-	// 3. Resilience & Observability
-	// TraceID must be outer to wrap context for logs
+	handler = corsHandler.Handler(handler)
+
 	handler = transport.WithTraceID(handler)
-	// Recovery must be outer to catch panics in any middleware below
 	handler = transport.WithRecovery(handler)
 
 	// 4. Timeout (Standard Lib) - Outermost logic barrier
