@@ -257,7 +257,7 @@ func (r *eventRepo) BatchSave(ctx context.Context, events []*domain.Event) error
 		if end > total {
 			end = total
 		}
-
+		// TODO: use newer batch approach
 		batch := r.client.Batch()
 		for _, event := range events[i:end] {
 			docRef := r.client.Collection(CollectionEvents).Doc(event.Id)

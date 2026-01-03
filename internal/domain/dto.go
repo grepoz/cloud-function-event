@@ -106,7 +106,7 @@ type UpdateEventDTO struct {
 }
 
 type BatchEventRequest struct {
-	Events []EventDTO `json:"events" validate:"required,min=1,max=5000,dive"`
+	Events []EventDTO `json:"events" validate:"required,min=1,max=500,dive"`
 }
 
 type TrackingEventDTO struct {

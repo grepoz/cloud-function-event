@@ -30,3 +30,4 @@
   APP_ENV: production
   CORS_ALLOWED_ORIGIN: "*"
   FIRESTORE_DATABASE_ID: bibently-store
+  GOMEMLIMIT: 460MiB # 90% of memory limit
