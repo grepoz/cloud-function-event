@@ -20,6 +20,9 @@
 --cpu: 2
 --timeout: 10s
 
+--set-secrets:
+  - /secrets/firestore-admin-uid=FIRESTORE_ADMIN_UID:latest
+
 # --- Network ---
 --ingress-settings: all
 

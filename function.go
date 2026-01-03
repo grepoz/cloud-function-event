@@ -20,9 +20,6 @@ import (
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/rs/cors"
 
-	secretmanager "cloud.google.com/go/secretmanager/apiv1"
-	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
-
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -59,21 +56,18 @@ func setupApplication() {
 
 	adminUID := os.Getenv("FIRESTORE_ADMIN_UID")
 	if os.Getenv("APP_ENV") == "production" {
-		smClient, err := secretmanager.NewClient(ctx)
-		if err != nil {
-			transport.Logger.Error("failed to create secretmanager client", "error", err)
-			panic(err)
-		}
-		defer smClient.Close()
+		secretPath := "/secrets/firestore-admin-uid"
 
-		secretPath := fmt.Sprintf("projects/%s/secrets/FIRESTORE_ADMIN_UID/versions/latest", projectID)
-		req := &secretmanagerpb.AccessSecretVersionRequest{Name: secretPath}
-		result, err := smClient.AccessSecretVersion(ctx, req)
+		data, err := os.ReadFile(secretPath)
 		if err != nil {
-			transport.Logger.Error("failed to access secret version", "error", err)
-			panic(err)
+			transport.Logger.Error("failed to read secret from volume",
+				"path", secretPath,
+				"error", err,
+			)
+			panic(fmt.Errorf("required secret not found at %s: %w", secretPath, err))
 		}
-		adminUID = string(result.Payload.Data)
+
+		adminUID = strings.TrimSpace(string(data))
 	}
 
 	databaseId := os.Getenv("FIRESTORE_DATABASE_ID")
