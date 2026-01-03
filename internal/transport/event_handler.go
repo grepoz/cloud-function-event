@@ -57,21 +57,21 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var eventDTO domain.EventDTO
 	if err := json.NewDecoder(r.Body).Decode(&eventDTO); err != nil {
-		respondError(w, domain.ErrValidation("Invalid JSON body"))
+		respondError(w, r, domain.ErrValidation("Invalid JSON body"))
 		return
 	}
 	if err := domain.Validate.Struct(eventDTO); err != nil {
-		respondError(w, domain.ErrValidation(err.Error()))
+		respondError(w, r, domain.ErrValidation(err.Error()))
 		return
 	}
 	event, err := domain.EventDTOToModel(&eventDTO)
 
 	if err != nil {
-		respondError(w, domain.ErrValidation(err.Error()))
+		respondError(w, r, domain.ErrValidation(err.Error()))
 		return
 	}
 	if err := h.service.CreateEvent(r.Context(), event); err != nil {
-		respondError(w, err)
+		respondError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -92,12 +92,12 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 func (h *EventHandler) handleBatchCreate(w http.ResponseWriter, r *http.Request) {
 	var req domain.BatchEventRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, domain.ErrValidation("Invalid JSON body"))
+		respondError(w, r, domain.ErrValidation("Invalid JSON body"))
 		return
 	}
 
 	if err := domain.Validate.Struct(req); err != nil {
-		respondError(w, domain.ErrValidation(err.Error()))
+		respondError(w, r, domain.ErrValidation(err.Error()))
 		return
 	}
 
@@ -105,14 +105,14 @@ func (h *EventHandler) handleBatchCreate(w http.ResponseWriter, r *http.Request)
 	for i, dto := range req.Events {
 		model, err := domain.EventDTOToModel(&dto)
 		if err != nil {
-			respondError(w, domain.ErrValidation(fmt.Sprintf("Item %d: %v", i, err)))
+			respondError(w, r, domain.ErrValidation(fmt.Sprintf("Item %d: %v", i, err)))
 			return
 		}
 		events = append(events, model)
 	}
 
 	if err := h.service.BatchCreateEvents(r.Context(), events); err != nil {
-		respondError(w, err)
+		respondError(w, r, err)
 		return
 	}
 
@@ -136,7 +136,7 @@ func (h *EventHandler) handleBatchCreate(w http.ResponseWriter, r *http.Request)
 func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		respondError(w, domain.ErrValidation("Missing id path parameter"))
+		respondError(w, r, domain.ErrValidation("Missing id path parameter"))
 		return
 	}
 
@@ -145,7 +145,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	// preventing us from distinguishing between missing fields and zero values.
 	var rawUpdates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&rawUpdates); err != nil {
-		respondError(w, domain.ErrValidation("Invalid JSON body"))
+		respondError(w, r, domain.ErrValidation("Invalid JSON body"))
 		return
 	}
 
@@ -165,7 +165,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	// Mapping: Name -> firestore:"name"
 	if name, ok := getString("name"); ok {
 		if name == "" {
-			respondError(w, domain.ErrValidation("name cannot be empty"))
+			respondError(w, r, domain.ErrValidation("name cannot be empty"))
 			return
 		}
 		updates["name"] = name
@@ -174,7 +174,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	// Mapping: Type -> firestore:"type"
 	if t, ok := getString("type"); ok {
 		if t == "" {
-			respondError(w, domain.ErrValidation("type cannot be empty"))
+			respondError(w, r, domain.ErrValidation("type cannot be empty"))
 			return
 		}
 		updates["type"] = t
@@ -184,7 +184,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	if s, ok := getString("start_date"); ok {
 		t, err := time.Parse(time.RFC3339, s)
 		if err != nil {
-			respondError(w, domain.ErrValidation("invalid start_date format"))
+			respondError(w, r, domain.ErrValidation("invalid start_date format"))
 			return
 		}
 		updates["start_date"] = t
@@ -194,7 +194,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	if s, ok := getString("end_date"); ok {
 		t, err := time.Parse(time.RFC3339, s)
 		if err != nil {
-			respondError(w, domain.ErrValidation("invalid end_date format"))
+			respondError(w, r, domain.ErrValidation("invalid end_date format"))
 			return
 		}
 		updates["end_date"] = t
@@ -223,7 +223,7 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	if offer, ok := rawUpdates["offer"].(map[string]interface{}); ok {
 		if price, ok := offer["price"].(float64); ok {
 			if price < 0 {
-				respondError(w, domain.ErrValidation("price cannot be negative"))
+				respondError(w, r, domain.ErrValidation("price cannot be negative"))
 				return
 			}
 			updates["offer"] = map[string]interface{}{
@@ -234,13 +234,13 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// 3. Fail if the request contained no valid updatable fields
 	if len(updates) == 0 {
-		respondError(w, domain.ErrValidation("No valid fields provided for update"))
+		respondError(w, r, domain.ErrValidation("No valid fields provided for update"))
 		return
 	}
 
 	// 4. Call Service
 	if err := h.service.UpdateEvent(r.Context(), id, updates); err != nil {
-		respondError(w, err)
+		respondError(w, r, err)
 		return
 	}
 
@@ -293,7 +293,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	if val := q.Get("page_size"); val != "" {
 		i, err := strconv.Atoi(val)
 		if err != nil {
-			respondError(w, domain.ErrValidation("page_size must be a valid integer"))
+			respondError(w, r, domain.ErrValidation("page_size must be a valid integer"))
 			return
 		}
 		dto.PageSize = i
@@ -305,7 +305,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	if val := q.Get("min_price"); val != "" {
 		f, err := strconv.ParseFloat(val, 64)
 		if err != nil {
-			respondError(w, domain.ErrValidation("min_price must be a valid number"))
+			respondError(w, r, domain.ErrValidation("min_price must be a valid number"))
 			return
 		}
 		dto.MinPrice = &f
@@ -315,7 +315,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	if val := q.Get("max_price"); val != "" {
 		f, err := strconv.ParseFloat(val, 64)
 		if err != nil {
-			respondError(w, domain.ErrValidation("max_price must be a valid number"))
+			respondError(w, r, domain.ErrValidation("max_price must be a valid number"))
 			return
 		}
 		dto.MaxPrice = &f
@@ -323,13 +323,13 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Struct Validation (Check constraints like gte=0, oneof, etc.)
 	if err := domain.Validate.Struct(dto); err != nil {
-		respondError(w, domain.ErrValidation(err.Error()))
+		respondError(w, r, domain.ErrValidation(err.Error()))
 		return
 	}
 
 	// 3. Logical Cross-Field Validation
 	if dto.MinPrice != nil && dto.MaxPrice != nil && *dto.MinPrice > *dto.MaxPrice {
-		respondError(w, domain.ErrValidation("min_price cannot be greater than max_price"))
+		respondError(w, r, domain.ErrValidation("min_price cannot be greater than max_price"))
 		return
 	}
 
@@ -347,7 +347,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if startDate != nil && endDate != nil && endDate.Before(*startDate) {
-		respondError(w, domain.ErrValidation("end_date cannot be before start_date"))
+		respondError(w, r, domain.ErrValidation("end_date cannot be before start_date"))
 		return
 	}
 
@@ -381,7 +381,7 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	// 5. Call Service
 	events, nextToken, err := h.service.ListEvents(r.Context(), searchReq)
 	if err != nil {
-		respondError(w, err)
+		respondError(w, r, err)
 		return
 	}
 
@@ -410,13 +410,13 @@ func (h *EventHandler) handleList(w http.ResponseWriter, r *http.Request) {
 func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		respondError(w, domain.ErrValidation("Missing id path parameter"))
+		respondError(w, r, domain.ErrValidation("Missing id path parameter"))
 		return
 	}
 
 	event, err := h.service.GetEvent(r.Context(), id)
 	if err != nil {
-		respondError(w, err)
+		respondError(w, r, err)
 		return
 	}
 
@@ -436,12 +436,12 @@ func (h *EventHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 func (h *EventHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		respondError(w, domain.ErrValidation("Missing id path parameter"))
+		respondError(w, r, domain.ErrValidation("Missing id path parameter"))
 		return
 	}
 
 	if err := h.service.DeleteEvent(r.Context(), id); err != nil {
-		respondError(w, err)
+		respondError(w, r, err)
 		return
 	}
 

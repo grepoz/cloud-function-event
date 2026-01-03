@@ -3,7 +3,7 @@ package function
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -39,12 +39,11 @@ var (
 // @in header
 // @name Authorization
 func init() {
-	log.Println("🔥 function init() executed")
+	transport.Logger.Info("🔥 function init() executed")
 	// Register the entry point, but DO NOT initialize clients here.
 	// We defer that to the first request.
 	functions.HTTP("BibentlyFunctions", func(w http.ResponseWriter, r *http.Request) {
-		// Lazy initialization on first request
-		log.Println("REQUEST PATH:", r.URL.Path)
+		transport.Logger.Info("Incoming request", slog.String("path", r.URL.Path))
 		initOnce.Do(func() {
 			setupApplication()
 		})
@@ -62,7 +61,8 @@ func setupApplication() {
 	if os.Getenv("APP_ENV") == "production" {
 		smClient, err := secretmanager.NewClient(ctx)
 		if err != nil {
-			log.Panicf("failed to create secretmanager client: %v", err)
+			transport.Logger.Error("failed to create secretmanager client", "error", err)
+			panic(err)
 		}
 		defer smClient.Close()
 
@@ -70,7 +70,8 @@ func setupApplication() {
 		req := &secretmanagerpb.AccessSecretVersionRequest{Name: secretPath}
 		result, err := smClient.AccessSecretVersion(ctx, req)
 		if err != nil {
-			log.Panicf("failed to access secret version: %v", err)
+			transport.Logger.Error("failed to access secret version", "error", err)
+			panic(err)
 		}
 		adminUID = string(result.Payload.Data)
 	}
@@ -80,20 +81,22 @@ func setupApplication() {
 	// 1. Initialize Firestore
 	fsClient, err := firestore.NewClientWithDatabase(ctx, projectID, databaseId)
 	if err != nil {
-		// Use Panic, not Fatal. Panic allows the runtime to catch and restart.
-		log.Panicf("Failed to create firestore client: %v", err)
+		transport.Logger.Error("Failed to create firestore client", "error", err)
+		panic(err)
 	}
 
 	// 2. Initialize Firebase Auth
 	conf := &firebase.Config{ProjectID: projectID}
 	app, err := firebase.NewApp(ctx, conf)
 	if err != nil {
-		log.Panicf("error initializing firebase app: %v", err)
+		transport.Logger.Error("Failed to create firebase app", "error", err)
+		panic(err)
 	}
 
 	authClient, err := app.Auth(ctx)
 	if err != nil {
-		log.Panicf("error getting auth client: %v", err)
+		transport.Logger.Error("Failed to create auth client", "error", err)
+		panic(err)
 	}
 
 	// 3. Initialize Domain Layers

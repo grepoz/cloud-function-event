@@ -19,14 +19,17 @@ import (
 var googleProjectID = os.Getenv("GOOGLE_CLOUD_PROJECT")
 
 // Setup logger with a Handler that handles context for Tracing
-var logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+var Logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	AddSource: true, // Enable source file/line info
 	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-		// Map standard keys to Google Cloud Logging keys
 		if a.Key == slog.LevelKey {
 			a.Key = "severity"
 		}
 		if a.Key == slog.MessageKey {
 			a.Key = "message"
+		}
+		if a.Key == slog.SourceKey {
+			a.Key = "logging.googleapis.com/sourceLocation"
 		}
 		return a
 	},
@@ -43,7 +46,7 @@ func logError(ctx context.Context, msg string, err error) {
 		args = append(args, "logging.googleapis.com/trace", traceVal)
 	}
 
-	logger.ErrorContext(ctx, msg, args...)
+	Logger.ErrorContext(ctx, msg, args...)
 }
 
 func NewRouter(eventSvc service.EventService, trackingSvc service.TrackingService) http.Handler {
@@ -123,23 +126,22 @@ func WithRecovery(next http.Handler) http.Handler {
 	})
 }
 
-func respondError(w http.ResponseWriter, err error) {
+func respondError(w http.ResponseWriter, r *http.Request, err error) {
+	// 1. Handle Client Validation Errors (HTTP 400)
 	if _, ok := err.(*domain.ValidationError); ok {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
 		return
 	}
+
+	// 2. Handle Resource Not Found Errors (HTTP 404)
 	if err.Error() == "event not found" {
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: err.Error()})
 		return
 	}
 
-	// Use context-aware logger
-	// We need request context here, but respondError signature doesn't have it.
-	// In a real scenario, pass r.Context() to respondError.
-	// For now, we log without context or you can refactor respondError to take ctx.
-	logger.Error("SERVER ERROR", "error", err.Error(), "component", "api_handler")
+	logError(r.Context(), "API ERROR", err)
 
 	w.WriteHeader(http.StatusInternalServerError)
 	_ = json.NewEncoder(w).Encode(domain.APIResponse{Error: "Internal Server Error"})

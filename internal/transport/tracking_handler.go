@@ -1,10 +1,11 @@
 package transport
 
 import (
-	"bibently.com/backend/internal/domain"
-	"bibently.com/backend/internal/service"
 	"encoding/json"
 	"net/http"
+
+	"bibently.com/backend/internal/domain"
+	"bibently.com/backend/internal/service"
 )
 
 type TrackingHandler struct {
@@ -47,11 +48,11 @@ func (h *TrackingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var dto domain.TrackingEventDTO
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		respondError(w, domain.ErrValidation("Invalid JSON"))
+		respondError(w, r, domain.ErrValidation("Invalid JSON"))
 		return
 	}
 	if err := domain.Validate.Struct(dto); err != nil {
-		respondError(w, domain.ErrValidation(err.Error()))
+		respondError(w, r, domain.ErrValidation(err.Error()))
 		return
 	}
 	trackingEvent := domain.TrackingEvent{
@@ -64,7 +65,7 @@ func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		trackingEvent.UserAgent = r.UserAgent()
 	}
 	if err := h.service.TrackEvent(r.Context(), &trackingEvent); err != nil {
-		respondError(w, err)
+		respondError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -83,7 +84,7 @@ func (h *TrackingHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 func (h *TrackingHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	tracks, err := h.service.GetAllTracking(r.Context())
 	if err != nil {
-		respondError(w, err)
+		respondError(w, r, err)
 		return
 	}
 	_ = json.NewEncoder(w).Encode(domain.APIResponse{Data: tracks})
