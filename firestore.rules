@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Match ALL documents in the database recursively
+    match /{document=**} {
+
+      // Deny all direct access.
+      // Database access is only allowed via the API (using Service Account).
+      allow read, write: if false;
+    }
+  }
+}

@@ -3,7 +3,7 @@ firestore-debug.log
 firebase-debug.log
 .env
 .env.production
-firestore.rules
+
 vendor
 
 .DS_Store

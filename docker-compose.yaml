@@ -1,19 +1,4 @@
 services:
-  firestore-rules-generator:
-    image: alpine
-    volumes:
-      - .:/app
-    working_dir: /app
-    environment:
-      - FIRESTORE_ADMIN_UID=admin_user_xyz_123_secret_id
-      - FIRESTORE_DATABASE_ID=bibently-store
-    # This mirrors the logic in legacy.cmd.mk
-    command: sh -c "
-        sed -e \"s/YOUR_ADMIN_UID_HERE/$${FIRESTORE_ADMIN_UID}/g\" 
-        -e \"s/{database}/$${FIRESTORE_DATABASE_ID}/g\" 
-        firestore.rules.template > firestore.rules
-      "
-
   firebase-emulators:
     image: andreysenov/firebase-tools:latest
     ports:
@@ -23,9 +8,7 @@ services:
     volumes:
       - .:/app # Matches the host directory to /app
     working_dir: /app
-    depends_on:
-      firestore-rules-generator:
-        condition: service_completed_successfully
+    # depends_on removed because firestore-rules-generator is gone
     command: sh -c "firebase emulators:start --project local-project-id --only firestore,auth"
     healthcheck:
       test: [ "CMD", "nc", "-z", "localhost", "9099" ]

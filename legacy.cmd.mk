@@ -24,17 +24,13 @@ test-integration: tidy
 	FIRESTORE_ADMIN_UID=$(FIRESTORE_ADMIN_UID) \
 	go test ./test/integration-tests/... -v -count=1
 
-rules:
-	@echo "Generating firestore.rules..."
-	# Use chained sed to replace both UID and the dynamic database ID
-	sed -e "s/YOUR_ADMIN_UID_HERE/$(FIRESTORE_ADMIN_UID)/g" \
-	    -e "s/{database}/$(FIRESTORE_DATABASE_ID)/g" firestore.rules.template > firestore.rules
+
 
 generate-fake-token:
 	go run ./cmd/generate_token.go
 
 # start firestore emulator
-start-emulators: rules
+start-emulators:
 	FIRESTORE_DATABASE_ID=$(FIRESTORE_DATABASE_ID) firebase emulators:start --only firestore,auth --project=$(GOOGLE_CLOUD_PROJECT)
 
 # Helper to run the function locally with emulator
@@ -56,7 +52,7 @@ deploy:
 	--service-account=$(FUNCTION_SERVICE_ACCOUNT) \
 	--update-env-vars=GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT)
 
-deploy-firebase: rules
+deploy-firebase:
 	firebase deploy --only firestore
 
 # can set all env vars from .env file
