@@ -26,11 +26,13 @@ func TestFirestoreSecurityRules(t *testing.T) {
 		t.Fatal("FIRESTORE_ADMIN_UID must be set to run rule tests")
 	}
 
-	// 1. Test Admin User (Should Succeed)
-	t.Run("AdminUser_CanWrite", func(t *testing.T) {
+	// 1. Test Admin User (Should FAIL - Direct access is denied)
+	t.Run("AdminUser_CannotWrite_Directly", func(t *testing.T) {
 		token := createEmulatorToken(adminUID, projectID)
-		if err := tryWriteEvent(emulatorHost, projectID, token); err != nil {
-			t.Errorf("Admin user failed to write to DB: %v", err)
+		if err := tryWriteEvent(emulatorHost, projectID, token); err == nil {
+			t.Error("Security breach: Admin user was able to write to DB directly! (Should be denied)")
+		} else {
+			t.Logf("Success: Admin blocked from direct DB access. Error: %v", err)
 		}
 	})
 
