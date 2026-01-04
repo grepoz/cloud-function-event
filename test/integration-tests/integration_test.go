@@ -444,7 +444,7 @@ func cleanupFirestore(t *testing.T, client *firestore.Client) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	collections := []string{"events", "tracking"}
+	collections := []string{"events", "tracking", "vector_docs"}
 
 	for _, colName := range collections {
 		iter := client.Collection(colName).Documents(ctx)

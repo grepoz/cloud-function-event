@@ -5,3 +5,5 @@ firebase-debug.log
 .env.production
 firestore.rules
 vendor
+
+.DS_Store
